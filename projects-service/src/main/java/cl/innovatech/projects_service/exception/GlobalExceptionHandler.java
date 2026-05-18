@@ -37,6 +37,12 @@ public class GlobalExceptionHandler {
         return response;
     }
 
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public Map<String, Object> handleGenericException(Exception ex) {
+        return error(ex.getMessage() != null ? ex.getMessage() : "Error interno del servidor");
+    }
+
     private Map<String, Object> error(String message) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);

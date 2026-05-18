@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +35,7 @@ public class ProjectService {
         return projectRepository.findAll()
                 .stream()
                 .map(this::toResponse)
-                .toList();
+                .collect(Collectors.toList());
     }
 
     public ProjectResponse findById(Long id) {
@@ -84,14 +85,14 @@ public class ProjectService {
         return projectRepository.findByEstado(estado)
                 .stream()
                 .map(this::toResponse)
-                .toList();
+                .collect(Collectors.toList());
     }
 
     public List<ProjectResponse> findByResponsableId(Long responsableId) {
         return projectRepository.findByResponsableId(responsableId)
                 .stream()
                 .map(this::toResponse)
-                .toList();
+                .collect(Collectors.toList());
     }
 
     private Project getProject(Long id) {

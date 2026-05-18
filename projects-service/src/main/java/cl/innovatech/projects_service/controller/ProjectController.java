@@ -25,8 +25,8 @@ public class ProjectController {
 
     @GetMapping
     public List<ProjectResponse> findAll(
-            @RequestParam(required = false) Project.Estado estado,
-            @RequestParam(required = false) Long responsableId
+            @RequestParam(name = "estado", required = false) Project.Estado estado,
+            @RequestParam(name = "responsableId", required = false) Long responsableId
     ) {
         if (estado != null) {
             return projectService.findByEstado(estado);
@@ -40,33 +40,33 @@ public class ProjectController {
     }
 
     @GetMapping("/{id}")
-    public ProjectResponse findById(@PathVariable Long id) {
+    public ProjectResponse findById(@PathVariable("id") Long id) {
         return projectService.findById(id);
     }
 
     @PutMapping("/{id}")
     public ProjectResponse update(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @Valid @RequestBody ProjectRequest request
     ) {
         return projectService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable("id") Long id) {
         projectService.delete(id);
     }
 
     @PatchMapping("/{id}/status")
     public ProjectResponse changeStatus(
-            @PathVariable Long id,
-            @RequestParam Project.Estado estado
+            @PathVariable("id") Long id,
+            @RequestParam(name = "estado") Project.Estado estado
     ) {
         return projectService.changeStatus(id, estado);
     }
 
     @PatchMapping("/{id}/close")
-    public ProjectResponse close(@PathVariable Long id) {
+    public ProjectResponse close(@PathVariable("id") Long id) {
         return projectService.close(id);
     }
 }
