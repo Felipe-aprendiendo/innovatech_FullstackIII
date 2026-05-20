@@ -1,121 +1,249 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect, useState } from 'react'
+import ProjectCard from './components/ProjectCard'
+import ProjectFormModal from './components/ProjectFormModal'
+
+const PROJECTS_API_URL =
+  import.meta.env.VITE_PROJECTS_API_URL ?? 'http://localhost:8003/api/v1/projects'
+
+const PRIORITY_ORDER = {
+  ALTA: 3,
+  MEDIA: 2,
+  BAJA: 1,
+}
+
+const initialProjectForm = {
+  nombre: '',
+  descripcion: '',
+  prioridad: 'MEDIA',
+  fechaInicio: '',
+  fechaFin: '',
+  responsableId: '',
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [projects, setProjects] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [criterioOrden, setCriterioOrden] = useState('prioridad')
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isProjectFormOpen, setIsProjectFormOpen] = useState(false)
+  const [isCreatingProject, setIsCreatingProject] = useState(false)
+  const [projectForm, setProjectForm] = useState(initialProjectForm)
+  const [createProjectError, setCreateProjectError] = useState('')
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setLoading(true)
+        setErrorMessage('')
+
+        const response = await fetch(PROJECTS_API_URL)
+
+        if (!response.ok) {
+          throw new Error('No se pudieron obtener los proyectos.')
+        }
+
+        const data = await response.json()
+        setProjects(Array.isArray(data) ? data : [])
+      } catch (error) {
+        setErrorMessage(error.message || 'Ocurrio un error al cargar los proyectos.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProjects()
+  }, [])
+
+  const openProjectForm = () => {
+    setCreateProjectError('')
+    setProjectForm(initialProjectForm)
+    setIsProjectFormOpen(true)
+  }
+
+  const closeProjectForm = () => {
+    if (isCreatingProject) {
+      return
+    }
+
+    setIsProjectFormOpen(false)
+    setCreateProjectError('')
+  }
+
+  const handleProjectFormChange = (event) => {
+    const { name, value } = event.target
+
+    setProjectForm((currentForm) => ({
+      ...currentForm,
+      [name]: value,
+    }))
+  }
+
+  const handleCreateProject = async (event) => {
+    event.preventDefault()
+
+    if (!projectForm.nombre.trim() || !projectForm.responsableId) {
+      setCreateProjectError('Completa nombre y responsable antes de guardar.')
+      return
+    }
+
+    try {
+      setIsCreatingProject(true)
+      setCreateProjectError('')
+
+      const payload = {
+        nombre: projectForm.nombre.trim(),
+        descripcion: projectForm.descripcion.trim(),
+        prioridad: projectForm.prioridad,
+        fechaInicio: projectForm.fechaInicio || null,
+        fechaFin: projectForm.fechaFin || null,
+        responsableId: Number(projectForm.responsableId),
+      }
+
+      const response = await fetch(PROJECTS_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        throw new Error('No se pudo crear el proyecto.')
+      }
+
+      const createdProject = await response.json()
+
+      setProjects((currentProjects) => [createdProject, ...currentProjects])
+      setIsProjectFormOpen(false)
+      setProjectForm(initialProjectForm)
+    } catch (error) {
+      setCreateProjectError(error.message || 'Ocurrio un error al crear el proyecto.')
+    } finally {
+      setIsCreatingProject(false)
+    }
+  }
+
+  const orderedProjects = [...projects].sort((projectA, projectB) => {
+    if (criterioOrden === 'id') {
+      return (projectB.id ?? 0) - (projectA.id ?? 0)
+    }
+
+    return (
+      (PRIORITY_ORDER[projectB.prioridad] ?? 0) -
+      (PRIORITY_ORDER[projectA.prioridad] ?? 0)
+    )
+  })
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,204,21,0.20),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#e2e8f0_52%,_#cbd5e1_100%)] text-slate-900">
+      <section className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-10 sm:px-8 lg:px-12">
+        <div className="mb-8 flex flex-col gap-6 rounded-[2rem] border border-white/60 bg-white/70 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)] backdrop-blur xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl">
+            <span className="inline-flex rounded-full border border-amber-300 bg-amber-100 px-4 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-amber-800">
+              Panel de proyectos
+            </span>
+            <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+              Proyectos en seguimiento visual
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+              Cada tarjeta usa el modelo de proyectos: nombre como titulo,
+              descripcion como especialidad, prioridad visible y estado operativo.
+            </p>
+
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={openProjectForm}
+                className="inline-flex items-center rounded-full bg-slate-950 px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-amber-400 hover:text-slate-950"
+              >
+                Agregar Proyecto
+              </button>
+            </div>
+          </div>
+
+          <div className="flex w-full flex-col gap-4 xl:max-w-xs">
+            <label className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Ordenar proyectos
+            </label>
+            <select
+              value={criterioOrden}
+              onChange={(event) => setCriterioOrden(event.target.value)}
+              className="rounded-2xl border border-slate-200 bg-slate-950 px-4 py-3 text-sm font-medium text-white shadow-lg outline-none transition focus:border-amber-400"
+            >
+              <option value="prioridad">Prioridad</option>
+              <option value="id">ID</option>
+            </select>
+
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-2xl border border-slate-200 bg-white px-3 py-4">
+                <p className="text-2xl font-black text-slate-950">{projects.length}</p>
+                <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">
+                  Total
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white px-3 py-4">
+                <p className="text-2xl font-black text-amber-600">
+                  {projects.filter((project) => project.prioridad === 'ALTA').length}
+                </p>
+                <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">
+                  Alta
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white px-3 py-4">
+                <p className="text-2xl font-black text-emerald-600">
+                  {
+                    projects.filter(
+                      (project) => project.estado === 'COMPLETADO' || project.estado === 'CERRADO',
+                    ).length
+                  }
+                </p>
+                <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">
+                  Finalizados
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+
+        {loading ? (
+          <div className="flex min-h-[260px] items-center justify-center rounded-[2rem] border border-dashed border-slate-300 bg-white/60 px-6 text-center shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+            <p className="text-lg font-semibold text-slate-600">
+              Cargando proyectos...
+            </p>
+          </div>
+        ) : errorMessage ? (
+          <div className="rounded-[2rem] border border-red-200 bg-red-50 px-6 py-10 text-center shadow-[0_18px_60px_rgba(239,68,68,0.12)]">
+            <p className="text-lg font-semibold text-red-700">{errorMessage}</p>
+            <p className="mt-2 text-sm text-red-500">
+              Verifica que el servicio de proyectos este disponible en{' '}
+              <span className="font-semibold">{PROJECTS_API_URL}</span>.
+            </p>
+          </div>
+        ) : orderedProjects.length === 0 ? (
+          <div className="rounded-[2rem] border border-slate-200 bg-white/70 px-6 py-10 text-center shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+            <p className="text-lg font-semibold text-slate-700">
+              No hay proyectos para mostrar.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
+            {orderedProjects.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
+          </div>
+        )}
       </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <ProjectFormModal
+        isOpen={isProjectFormOpen}
+        formValues={projectForm}
+        isSubmitting={isCreatingProject}
+        errorMessage={createProjectError}
+        onClose={closeProjectForm}
+        onChange={handleProjectFormChange}
+        onSubmit={handleCreateProject}
+      />
+    </main>
   )
 }
 
