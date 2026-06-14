@@ -6,14 +6,11 @@ import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-
-import java.nio.charset.StandardCharsets;
 
 @Component
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
@@ -21,30 +18,45 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
+    private final GatewayAccessPolicy accessPolicy;
+    private final GatewayErrorResponseWriter errorResponseWriter;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            GatewayAccessPolicy accessPolicy,
+            GatewayErrorResponseWriter errorResponseWriter
+    ) {
         this.jwtService = jwtService;
+        this.accessPolicy = accessPolicy;
+        this.errorResponseWriter = errorResponseWriter;
     }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        String authorizationHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-
-        if (!StringUtils.hasText(authorizationHeader)) {
+        if (accessPolicy.isPublic(exchange)) {
             return chain.filter(exchange);
         }
 
+        String authorizationHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
+        if (!StringUtils.hasText(authorizationHeader)) {
+            return errorResponseWriter.write(exchange, HttpStatus.UNAUTHORIZED, "Esta ruta requiere un token JWT.");
+        }
+
         if (!authorizationHeader.startsWith(BEARER_PREFIX)) {
-            return unauthorized(exchange, "El header Authorization debe usar formato Bearer.");
+            return errorResponseWriter.write(exchange, HttpStatus.UNAUTHORIZED, "El header Authorization debe usar formato Bearer.");
         }
 
         String token = authorizationHeader.substring(BEARER_PREFIX.length()).trim();
         if (!StringUtils.hasText(token)) {
-            return unauthorized(exchange, "El token JWT no puede estar vacio.");
+            return errorResponseWriter.write(exchange, HttpStatus.UNAUTHORIZED, "El token JWT no puede estar vacio.");
         }
 
         try {
             AuthenticatedUser user = jwtService.parse(token);
+            if (accessPolicy.requiresAdmin(exchange) && !user.isAdmin()) {
+                return errorResponseWriter.write(exchange, HttpStatus.FORBIDDEN, "No tienes permisos para acceder a este recurso.");
+            }
 
             ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                     .headers(headers -> {
@@ -58,17 +70,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
             return chain.filter(exchange.mutate().request(mutatedRequest).build());
         } catch (IllegalArgumentException | JwtException exception) {
-            return unauthorized(exchange, exception.getMessage());
+            return errorResponseWriter.write(exchange, HttpStatus.UNAUTHORIZED, exception.getMessage());
         }
-    }
-
-    private Mono<Void> unauthorized(ServerWebExchange exchange, String message) {
-        byte[] responseBody = ("{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"" + message + "\"}")
-                .getBytes(StandardCharsets.UTF_8);
-
-        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
-        return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(responseBody)));
     }
 
     @Override
