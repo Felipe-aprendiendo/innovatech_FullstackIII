@@ -18,3 +18,7 @@ spring:
 logging:
   level:
     cl.innovatech.projects_service: DEBUG
+
+app:
+  services:
+    users-url: http://localhost:8002

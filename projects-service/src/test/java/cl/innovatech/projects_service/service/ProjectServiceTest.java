@@ -1,5 +1,6 @@
 package cl.innovatech.projects_service.service;
 
+import cl.innovatech.projects_service.client.UsersClient;
 import cl.innovatech.projects_service.dto.ProjectRequest;
 import cl.innovatech.projects_service.entity.Project;
 import cl.innovatech.projects_service.repository.ProjectRepository;
@@ -10,7 +11,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.LinkedHashSet;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -24,6 +27,9 @@ class ProjectServiceTest {
     @Mock
     private ProjectRepository projectRepository;
 
+    @Mock
+    private UsersClient usersClient;
+
     @InjectMocks
     private ProjectService projectService;
 
@@ -35,7 +41,8 @@ class ProjectServiceTest {
                 Project.Prioridad.MEDIA,
                 LocalDate.of(2026, 6, 20),
                 LocalDate.of(2026, 6, 10),
-                5L
+                5L,
+                Set.of(8L)
         );
 
         IllegalArgumentException exception = assertThrows(
@@ -80,6 +87,56 @@ class ProjectServiceTest {
         assertEquals(Project.Estado.CERRADO, response.estado());
         assertEquals(LocalDate.now(), response.fechaFin());
         verify(projectRepository).save(project);
+    }
+
+    @Test
+    void shouldNormalizeMembersAndIncludeResponsibleOnCreate() {
+        ProjectRequest request = new ProjectRequest(
+                "Portal Interno",
+                "Proyecto de soporte operativo",
+                Project.Prioridad.MEDIA,
+                LocalDate.of(2026, 6, 1),
+                LocalDate.of(2026, 6, 30),
+                5L,
+                Set.of(8L, 13L)
+        );
+
+        when(usersClient.getUserSummary(5L)).thenReturn(new UsersClient.UserSummary(5L, true));
+        when(usersClient.getUserSummary(8L)).thenReturn(new UsersClient.UserSummary(8L, true));
+        when(usersClient.getUserSummary(13L)).thenReturn(new UsersClient.UserSummary(13L, true));
+        when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
+            Project project = invocation.getArgument(0);
+            project.setId(77L);
+            return project;
+        });
+
+        var response = projectService.create(request);
+
+        assertEquals(77L, response.id());
+        assertEquals(new LinkedHashSet<>(Set.of(8L, 13L, 5L)), response.miembroIds());
+    }
+
+    @Test
+    void shouldRejectDisabledMember() {
+        ProjectRequest request = new ProjectRequest(
+                "Portal Interno",
+                "Proyecto de soporte operativo",
+                Project.Prioridad.MEDIA,
+                LocalDate.of(2026, 6, 1),
+                LocalDate.of(2026, 6, 30),
+                5L,
+                Set.of(9L)
+        );
+
+        when(usersClient.getUserSummary(5L)).thenReturn(new UsersClient.UserSummary(5L, true));
+        when(usersClient.getUserSummary(9L)).thenReturn(new UsersClient.UserSummary(9L, false));
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> projectService.create(request)
+        );
+
+        assertEquals("El miembro no está habilitado: 9", exception.getMessage());
     }
 
     private Project project(Long id, Project.Estado estado, LocalDate fechaInicio, LocalDate fechaFin) {

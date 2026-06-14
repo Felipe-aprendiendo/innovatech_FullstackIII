@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 public record ProjectRequest(
         @NotBlank(message = "El nombre es obligatorio")
@@ -29,7 +30,9 @@ public record ProjectRequest(
 
         @NotNull(message = "El responsableId es obligatorio")
         @Positive(message = "El responsableId debe ser mayor que cero")
-        Long responsableId
+        Long responsableId,
+
+        Set<@Positive(message = "Cada miembroId debe ser mayor que cero") Long> miembroIds
 ) {
 
     @AssertTrue(message = "La fechaFin no puede ser anterior a la fechaInicio")

@@ -30,6 +30,10 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+app:
+  services:
+    users-url: ${USERS_SERVICE_URL:http://localhost:8002}
+
 management:
   endpoints:
     web:

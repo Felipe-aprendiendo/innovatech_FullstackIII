@@ -1,5 +1,6 @@
 package cl.innovatech.projects_service.service;
 
+import cl.innovatech.projects_service.client.UsersClient;
 import cl.innovatech.projects_service.dto.ProjectRequest;
 import cl.innovatech.projects_service.dto.ProjectResponse;
 import cl.innovatech.projects_service.entity.Project;
@@ -9,9 +10,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.EnumMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,9 +37,12 @@ public class ProjectService {
     }
 
     private final ProjectRepository projectRepository;
+    private final UsersClient usersClient;
 
     public ProjectResponse create(ProjectRequest request) {
         validateProjectDates(request);
+        Set<Long> miembroIds = normalizeMemberIds(request.responsableId(), request.miembroIds());
+        validateAssignedUsers(request.responsableId(), miembroIds);
 
         Project project = Project.builder()
                 .nombre(request.nombre())
@@ -43,15 +51,19 @@ public class ProjectService {
                 .fechaInicio(request.fechaInicio())
                 .fechaFin(request.fechaFin())
                 .responsableId(request.responsableId())
+                .miembroIds(miembroIds)
                 .estado(Project.Estado.PLANIFICADO)
                 .build();
 
         return toResponse(projectRepository.save(project));
     }
 
-    public List<ProjectResponse> findAll() {
+    public List<ProjectResponse> findAll(Project.Estado estado, Long responsableId, Long miembroId) {
         return projectRepository.findAll()
                 .stream()
+                .filter(project -> estado == null || project.getEstado() == estado)
+                .filter(project -> responsableId == null || Objects.equals(project.getResponsableId(), responsableId))
+                .filter(project -> miembroId == null || project.getMiembroIds().contains(miembroId))
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -68,12 +80,16 @@ public class ProjectService {
             throw new IllegalStateException("No se puede modificar un proyecto cerrado");
         }
 
+        Set<Long> miembroIds = normalizeMemberIds(request.responsableId(), request.miembroIds());
+        validateAssignedUsers(request.responsableId(), miembroIds);
+
         project.setNombre(request.nombre());
         project.setDescripcion(request.descripcion());
         project.setPrioridad(request.prioridad());
         project.setFechaInicio(request.fechaInicio());
         project.setFechaFin(request.fechaFin());
         project.setResponsableId(request.responsableId());
+        project.setMiembroIds(miembroIds);
 
         return toResponse(projectRepository.save(project));
     }
@@ -109,20 +125,6 @@ public class ProjectService {
         return toResponse(projectRepository.save(project));
     }
 
-    public List<ProjectResponse> findByEstado(Project.Estado estado) {
-        return projectRepository.findByEstado(estado)
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
-    }
-
-    public List<ProjectResponse> findByResponsableId(Long responsableId) {
-        return projectRepository.findByResponsableId(responsableId)
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
-    }
-
     private Project getProject(Long id) {
         return projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + id));
@@ -148,6 +150,29 @@ public class ProjectService {
         }
     }
 
+    private Set<Long> normalizeMemberIds(Long responsableId, Collection<Long> miembroIds) {
+        LinkedHashSet<Long> normalized = new LinkedHashSet<>();
+        if (miembroIds != null) {
+            miembroIds.stream()
+                    .filter(Objects::nonNull)
+                    .forEach(normalized::add);
+        }
+        normalized.add(responsableId);
+        return normalized;
+    }
+
+    private void validateAssignedUsers(Long responsableId, Set<Long> miembroIds) {
+        validateActiveUser(responsableId, "El responsable");
+        miembroIds.forEach(memberId -> validateActiveUser(memberId, "El miembro"));
+    }
+
+    private void validateActiveUser(Long userId, String label) {
+        UsersClient.UserSummary userSummary = usersClient.getUserSummary(userId);
+        if (!Boolean.TRUE.equals(userSummary.enabled())) {
+            throw new IllegalStateException(label + " no está habilitado: " + userId);
+        }
+    }
+
     private ProjectResponse toResponse(Project project) {
         return new ProjectResponse(
                 project.getId(),
@@ -158,6 +183,7 @@ public class ProjectService {
                 project.getFechaInicio(),
                 project.getFechaFin(),
                 project.getResponsableId(),
+                project.getMiembroIds(),
                 project.getCreatedAt(),
                 project.getUpdatedAt()
         );
