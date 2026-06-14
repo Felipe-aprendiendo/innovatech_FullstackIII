@@ -33,6 +33,10 @@ springdoc:
 app:
   services:
     users-url: ${USERS_SERVICE_URL:http://localhost:8002}
+    tasks-url: ${TASKS_SERVICE_URL:http://localhost:8004}
+  integration:
+    user-id: ${INTEGRATION_USER_ID:1}
+    user-role: ${INTEGRATION_USER_ROLE:ADMIN}
 
 management:
   endpoints:

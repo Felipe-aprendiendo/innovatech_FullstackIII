@@ -16,6 +16,7 @@ public record ProjectResponse(
         LocalDate fechaFin,
         Long responsableId,
         Set<Long> miembroIds,
+        ProjectProgress avance,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

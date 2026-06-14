@@ -1,6 +1,8 @@
 package cl.innovatech.projects_service.service;
 
 import cl.innovatech.projects_service.client.UsersClient;
+import cl.innovatech.projects_service.client.TasksClient;
+import cl.innovatech.projects_service.dto.ProjectProgress;
 import cl.innovatech.projects_service.dto.ProjectRequest;
 import cl.innovatech.projects_service.dto.ProjectResponse;
 import cl.innovatech.projects_service.entity.Project;
@@ -38,6 +40,7 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final UsersClient usersClient;
+    private final TasksClient tasksClient;
 
     public ProjectResponse create(ProjectRequest request) {
         validateProjectDates(request);
@@ -174,6 +177,7 @@ public class ProjectService {
     }
 
     private ProjectResponse toResponse(Project project) {
+        ProjectProgress progress = calculateProgress(project.getId());
         return new ProjectResponse(
                 project.getId(),
                 project.getNombre(),
@@ -184,8 +188,35 @@ public class ProjectService {
                 project.getFechaFin(),
                 project.getResponsableId(),
                 project.getMiembroIds(),
+                progress,
                 project.getCreatedAt(),
                 project.getUpdatedAt()
         );
+    }
+
+    private ProjectProgress calculateProgress(Long projectId) {
+        List<TasksClient.TaskSummary> tasks = tasksClient.findByProject(projectId);
+
+        int total = tasks.size();
+        int pendientes = countTasksByStatus(tasks, "PENDIENTE");
+        int enProgreso = countTasksByStatus(tasks, "EN_PROGRESO");
+        int completadas = countTasksByStatus(tasks, "COMPLETADA");
+        int canceladas = countTasksByStatus(tasks, "CANCELADA");
+        int porcentajeAvance = total == 0 ? 0 : (int) Math.round((completadas * 100.0) / total);
+
+        return new ProjectProgress(
+                total,
+                pendientes,
+                enProgreso,
+                completadas,
+                canceladas,
+                porcentajeAvance
+        );
+    }
+
+    private int countTasksByStatus(List<TasksClient.TaskSummary> tasks, String status) {
+        return (int) tasks.stream()
+                .filter(task -> status.equals(task.estado()))
+                .count();
     }
 }

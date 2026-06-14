@@ -1,5 +1,6 @@
 package cl.innovatech.projects_service.service;
 
+import cl.innovatech.projects_service.client.TasksClient;
 import cl.innovatech.projects_service.client.UsersClient;
 import cl.innovatech.projects_service.dto.ProjectRequest;
 import cl.innovatech.projects_service.entity.Project;
@@ -12,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -29,6 +31,9 @@ class ProjectServiceTest {
 
     @Mock
     private UsersClient usersClient;
+
+    @Mock
+    private TasksClient tasksClient;
 
     @InjectMocks
     private ProjectService projectService;
@@ -81,6 +86,7 @@ class ProjectServiceTest {
 
         when(projectRepository.findById(20L)).thenReturn(Optional.of(project));
         when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(tasksClient.findByProject(20L)).thenReturn(List.of());
 
         var response = projectService.close(20L);
 
@@ -104,6 +110,7 @@ class ProjectServiceTest {
         when(usersClient.getUserSummary(5L)).thenReturn(new UsersClient.UserSummary(5L, true));
         when(usersClient.getUserSummary(8L)).thenReturn(new UsersClient.UserSummary(8L, true));
         when(usersClient.getUserSummary(13L)).thenReturn(new UsersClient.UserSummary(13L, true));
+        when(tasksClient.findByProject(77L)).thenReturn(List.of());
         when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
             Project project = invocation.getArgument(0);
             project.setId(77L);
@@ -137,6 +144,32 @@ class ProjectServiceTest {
         );
 
         assertEquals("El miembro no está habilitado: 9", exception.getMessage());
+    }
+
+    @Test
+    void shouldCalculateProjectProgressFromTasks() {
+        Project project = project(
+                50L,
+                Project.Estado.EN_PROGRESO,
+                LocalDate.of(2026, 6, 1),
+                LocalDate.of(2026, 6, 30)
+        );
+
+        when(projectRepository.findById(50L)).thenReturn(Optional.of(project));
+        when(tasksClient.findByProject(50L)).thenReturn(List.of(
+                new TasksClient.TaskSummary(1L, "PENDIENTE"),
+                new TasksClient.TaskSummary(2L, "EN_PROGRESO"),
+                new TasksClient.TaskSummary(3L, "COMPLETADA"),
+                new TasksClient.TaskSummary(4L, "COMPLETADA")
+        ));
+
+        var response = projectService.findById(50L);
+
+        assertEquals(4, response.avance().totalTareas());
+        assertEquals(1, response.avance().tareasPendientes());
+        assertEquals(1, response.avance().tareasEnProgreso());
+        assertEquals(2, response.avance().tareasCompletadas());
+        assertEquals(50, response.avance().porcentajeAvance());
     }
 
     private Project project(Long id, Project.Estado estado, LocalDate fechaInicio, LocalDate fechaFin) {

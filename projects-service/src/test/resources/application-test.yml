@@ -22,3 +22,7 @@ logging:
 app:
   services:
     users-url: http://localhost:8002
+    tasks-url: http://localhost:8004
+  integration:
+    user-id: 1
+    user-role: ADMIN
