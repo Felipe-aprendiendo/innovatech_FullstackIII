@@ -8,20 +8,38 @@ import cl.innovatech.projects_service.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ProjectService {
 
+    private static final Map<Project.Estado, List<Project.Estado>> ALLOWED_STATUS_TRANSITIONS =
+            new EnumMap<>(Project.Estado.class);
+
+    static {
+        ALLOWED_STATUS_TRANSITIONS.put(Project.Estado.PLANIFICADO,
+                List.of(Project.Estado.EN_PROGRESO, Project.Estado.CERRADO));
+        ALLOWED_STATUS_TRANSITIONS.put(Project.Estado.EN_PROGRESO,
+                List.of(Project.Estado.COMPLETADO, Project.Estado.CERRADO));
+        ALLOWED_STATUS_TRANSITIONS.put(Project.Estado.COMPLETADO,
+                List.of(Project.Estado.CERRADO));
+        ALLOWED_STATUS_TRANSITIONS.put(Project.Estado.CERRADO, List.of());
+    }
+
     private final ProjectRepository projectRepository;
 
     public ProjectResponse create(ProjectRequest request) {
+        validateProjectDates(request);
+
         Project project = Project.builder()
                 .nombre(request.nombre())
                 .descripcion(request.descripcion())
-                .prioridad(request.prioridad() != null ? request.prioridad() : Project.Prioridad.MEDIA)
+                .prioridad(request.prioridad())
                 .fechaInicio(request.fechaInicio())
                 .fechaFin(request.fechaFin())
                 .responsableId(request.responsableId())
@@ -44,6 +62,7 @@ public class ProjectService {
 
     public ProjectResponse update(Long id, ProjectRequest request) {
         Project project = getProject(id);
+        validateProjectDates(request);
 
         if (project.getEstado() == Project.Estado.CERRADO) {
             throw new IllegalStateException("No se puede modificar un proyecto cerrado");
@@ -51,7 +70,7 @@ public class ProjectService {
 
         project.setNombre(request.nombre());
         project.setDescripcion(request.descripcion());
-        project.setPrioridad(request.prioridad() != null ? request.prioridad() : project.getPrioridad());
+        project.setPrioridad(request.prioridad());
         project.setFechaInicio(request.fechaInicio());
         project.setFechaFin(request.fechaFin());
         project.setResponsableId(request.responsableId());
@@ -71,13 +90,22 @@ public class ProjectService {
             throw new IllegalStateException("No se puede cambiar el estado de un proyecto cerrado");
         }
 
+        validateStatusTransition(project.getEstado(), estado);
         project.setEstado(estado);
         return toResponse(projectRepository.save(project));
     }
 
     public ProjectResponse close(Long id) {
         Project project = getProject(id);
+
+        if (project.getEstado() == Project.Estado.CERRADO) {
+            return toResponse(project);
+        }
+
         project.setEstado(Project.Estado.CERRADO);
+        if (project.getFechaFin() == null) {
+            project.setFechaFin(LocalDate.now());
+        }
         return toResponse(projectRepository.save(project));
     }
 
@@ -98,6 +126,26 @@ public class ProjectService {
     private Project getProject(Long id) {
         return projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + id));
+    }
+
+    private void validateProjectDates(ProjectRequest request) {
+        if (request.fechaInicio() != null && request.fechaFin() != null
+                && request.fechaFin().isBefore(request.fechaInicio())) {
+            throw new IllegalArgumentException("La fechaFin no puede ser anterior a la fechaInicio");
+        }
+    }
+
+    private void validateStatusTransition(Project.Estado currentStatus, Project.Estado newStatus) {
+        if (currentStatus == newStatus) {
+            return;
+        }
+
+        List<Project.Estado> allowedTransitions = ALLOWED_STATUS_TRANSITIONS.getOrDefault(currentStatus, List.of());
+        if (!allowedTransitions.contains(newStatus)) {
+            throw new IllegalStateException(
+                    "No se puede cambiar el estado de " + currentStatus + " a " + newStatus
+            );
+        }
     }
 
     private ProjectResponse toResponse(Project project) {
