@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, Object> handleValidation(MethodArgumentNotValidException ex) {
-        Map<String, Object> response = error("Error de validación");
+        Map<String, Object> response = error("Error de validación.");
 
         Map<String, String> fields = new HashMap<>();
 
