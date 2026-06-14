@@ -20,6 +20,11 @@ spring:
       host: localhost
       port: 6379
 
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
 app:
   services:
     projects-url: http://localhost:8003
