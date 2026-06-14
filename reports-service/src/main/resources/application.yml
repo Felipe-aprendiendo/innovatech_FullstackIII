@@ -1,0 +1,68 @@
+server:
+  port: 8005
+
+spring:
+  application:
+    name: reports-service
+
+  datasource:
+    url: jdbc:mysql://localhost:3310/innovatech_reports?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD:innovatech2024}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+resilience4j:
+  retry:
+    instances:
+      projects-client:
+        max-attempts: 3
+        wait-duration: 500ms
+      tasks-client:
+        max-attempts: 3
+        wait-duration: 500ms
+
+app:
+  services:
+    projects-url: ${PROJECTS_SERVICE_URL:http://localhost:8003}
+    tasks-url: ${TASKS_SERVICE_URL:http://localhost:8004}
+  redis:
+    stream: task-events
+    consumer-group: reports-service
+    consumer-name: reports-1
+
+logging:
+  file:
+    name: logs/reports-service.log
+  level:
+    cl.innovatech.reports: DEBUG
