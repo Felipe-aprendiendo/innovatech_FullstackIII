@@ -61,7 +61,7 @@ public class ReportController {
     @Operation(summary = "KPIs de un proyecto específico (todos los roles)")
     @GetMapping("/kpis/{projectId}")
     public ResponseEntity<ApiResponse<KpiResponse>> getKpiByProject(
-            @PathVariable Long projectId,
+            @PathVariable("projectId") Long projectId,
             @RequestHeader("X-User-Id") Long userId,
             @RequestHeader("X-User-Role") String userRole) {
 

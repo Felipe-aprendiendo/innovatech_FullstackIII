@@ -19,6 +19,16 @@
             "projectName": "tasks-service",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-ReportsServiceApplication<reports-service>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "cl.innovatech.reports.ReportsServiceApplication",
+            "projectName": "reports-service",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
         }
     ]
 }
