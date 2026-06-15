@@ -23,7 +23,7 @@ public class CommentController {
     @Operation(summary = "Agregar comentario a una tarea")
     @PostMapping("/{id}/comments")
     public ResponseEntity<ApiResponse<CommentResponse>> addComment(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @Valid @RequestBody CommentRequest request,
             @RequestHeader("X-User-Id") Long userId,
             @RequestHeader("X-User-Role") String userRole) {

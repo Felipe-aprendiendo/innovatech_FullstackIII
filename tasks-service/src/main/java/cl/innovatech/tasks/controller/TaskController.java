@@ -24,9 +24,9 @@ public class TaskController {
     @Operation(summary = "Listar tareas con filtros opcionales")
     @GetMapping
     public ResponseEntity<ApiResponse<List<TaskResponse>>> findAll(
-            @RequestParam(required = false) Long projectId,
-            @RequestParam(required = false) Task.EstadoTarea estado,
-            @RequestParam(required = false) Long responsableId,
+            @RequestParam(name = "projectId", required = false) Long projectId,
+            @RequestParam(name = "estado", required = false) Task.EstadoTarea estado,
+            @RequestParam(name = "responsableId", required = false) Long responsableId,
             @RequestHeader("X-User-Id") Long userId,
             @RequestHeader("X-User-Role") String userRole) {
 
@@ -49,7 +49,7 @@ public class TaskController {
     @Operation(summary = "Obtener detalle de tarea con comentarios")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<TaskResponse>> findById(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestHeader("X-User-Id") Long userId,
             @RequestHeader("X-User-Role") String userRole) {
 
@@ -60,7 +60,7 @@ public class TaskController {
     @Operation(summary = "Actualizar tarea")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<TaskResponse>> update(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @Valid @RequestBody UpdateTaskRequest request,
             @RequestHeader("X-User-Id") Long userId,
             @RequestHeader("X-User-Role") String userRole) {
@@ -72,7 +72,7 @@ public class TaskController {
     @Operation(summary = "Cambiar estado de tarea")
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<TaskResponse>> updateStatus(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @Valid @RequestBody UpdateStatusRequest request,
             @RequestHeader("X-User-Id") Long userId,
             @RequestHeader("X-User-Role") String userRole) {
@@ -84,7 +84,7 @@ public class TaskController {
     @Operation(summary = "Eliminar tarea (solo ADMIN)")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestHeader("X-User-Role") String userRole) {
 
         taskService.delete(id, userRole);
@@ -94,7 +94,7 @@ public class TaskController {
     @Operation(summary = "Listar tareas de un proyecto")
     @GetMapping("/project/{projectId}")
     public ResponseEntity<ApiResponse<List<TaskResponse>>> findByProject(
-            @PathVariable Long projectId,
+            @PathVariable("projectId") Long projectId,
             @RequestHeader("X-User-Id") Long userId,
             @RequestHeader("X-User-Role") String userRole) {
 
