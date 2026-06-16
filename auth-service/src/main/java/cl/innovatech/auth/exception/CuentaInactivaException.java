@@ -1,0 +1,11 @@
+package cl.innovatech.auth.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@ResponseStatus(HttpStatus.FORBIDDEN)
+public class CuentaInactivaException extends RuntimeException {
+    public CuentaInactivaException(String email) {
+        super("La cuenta está inactiva: " + email);
+    }
+}
