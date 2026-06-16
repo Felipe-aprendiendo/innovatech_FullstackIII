@@ -1,0 +1,12 @@
+cl\innovatech\projects_service\exception\GlobalExceptionHandler.class
+cl\innovatech\projects_service\controller\ProjectController.class
+cl\innovatech\projects_service\entity\Project$Prioridad.class
+cl\innovatech\projects_service\entity\Project$Estado.class
+cl\innovatech\projects_service\service\ProjectService.class
+cl\innovatech\projects_service\dto\ProjectRequest.class
+cl\innovatech\projects_service\entity\Project.class
+cl\innovatech\projects_service\dto\ProjectResponse.class
+cl\innovatech\projects_service\entity\Project$ProjectBuilder.class
+cl\innovatech\projects_service\exception\ResourceNotFoundException.class
+cl\innovatech\projects_service\ProjectsServiceApplication.class
+cl\innovatech\projects_service\repository\ProjectRepository.class
