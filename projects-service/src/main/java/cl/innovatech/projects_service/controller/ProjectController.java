@@ -26,17 +26,10 @@ public class ProjectController {
     @GetMapping
     public List<ProjectResponse> findAll(
             @RequestParam(name = "estado", required = false) Project.Estado estado,
-            @RequestParam(name = "responsableId", required = false) Long responsableId
+            @RequestParam(name = "responsableId", required = false) Long responsableId,
+            @RequestParam(name = "miembroId", required = false) Long miembroId
     ) {
-        if (estado != null) {
-            return projectService.findByEstado(estado);
-        }
-
-        if (responsableId != null) {
-            return projectService.findByResponsableId(responsableId);
-        }
-
-        return projectService.findAll();
+        return projectService.findAll(estado, responsableId, miembroId);
     }
 
     @GetMapping("/{id}")

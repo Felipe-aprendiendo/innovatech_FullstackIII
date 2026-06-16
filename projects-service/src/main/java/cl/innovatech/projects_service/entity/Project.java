@@ -5,6 +5,8 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "projects")
@@ -41,6 +43,15 @@ public class Project {
 
     @Column(nullable = false)
     private Long responsableId;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "project_members",
+            joinColumns = @JoinColumn(name = "project_id")
+    )
+    @Column(name = "member_id", nullable = false)
+    @Builder.Default
+    private Set<Long> miembroIds = new LinkedHashSet<>();
 
     @Column(updatable = false)
     private LocalDateTime createdAt;
