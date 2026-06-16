@@ -1,0 +1,42 @@
+server:
+  port: ${SERVER_PORT:8000}
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+gateway:
+  services:
+    auth: ${AUTH_SERVICE_URL:http://localhost:8001}
+    users: ${USERS_SERVICE_URL:http://localhost:8002}
+    projects: ${PROJECTS_SERVICE_URL:http://localhost:8003}
+    tasks: ${TASKS_SERVICE_URL:http://localhost:8004}
+    reports: ${REPORTS_SERVICE_URL:http://localhost:8005}
+  cors:
+    allowed-origins:
+      - ${GATEWAY_ALLOWED_ORIGIN:http://localhost:5173}
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    allowed-headers:
+      - Authorization
+      - Content-Type
+      - X-Requested-With
+    exposed-headers:
+      - Authorization
+  jwt:
+    secret: ${JWT_SECRET:cambiar_por_un_secreto_de_al_menos_32_caracteres_muy_seguro}
