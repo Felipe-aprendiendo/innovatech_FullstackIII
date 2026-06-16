@@ -23,10 +23,16 @@ public class GlobalExceptionHandler {
         return error(ex.getMessage());
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, Object> handleIllegalArgument(IllegalArgumentException ex) {
+        return error(ex.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, Object> handleValidation(MethodArgumentNotValidException ex) {
-        Map<String, Object> response = error("Error de validación");
+        Map<String, Object> response = error("Error de validación.");
 
         Map<String, String> fields = new HashMap<>();
 
