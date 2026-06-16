@@ -29,7 +29,7 @@ public class UserController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener usuario por ID")
-    public ResponseEntity<UserResponseDTO> findById(@PathVariable Long id) {
+    public ResponseEntity<UserResponseDTO> findById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(userService.findById(id));
     }
 
@@ -41,21 +41,21 @@ public class UserController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar usuario")
-    public ResponseEntity<UserResponseDTO> update(@PathVariable Long id,
+    public ResponseEntity<UserResponseDTO> update(@PathVariable("id") Long id,
                                                    @Valid @RequestBody UserRequestDTO dto) {
         return ResponseEntity.ok(userService.update(id, dto));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar usuario")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
         userService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/toggle")
     @Operation(summary = "Activar/desactivar usuario")
-    public ResponseEntity<UserResponseDTO> toggle(@PathVariable Long id) {
+    public ResponseEntity<UserResponseDTO> toggle(@PathVariable("id") Long id) {
         return ResponseEntity.ok(userService.toggleEnabled(id));
     }
 }
