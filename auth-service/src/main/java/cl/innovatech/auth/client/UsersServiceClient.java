@@ -52,7 +52,7 @@ public class UsersServiceClient {
             ResponseEntity<UserStatusResponse> resp =
                 restTemplate.getForEntity(url, UserStatusResponse.class);
             if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) return false;
-            return "ACTIVO".equals(resp.getBody().estado());
+            return Boolean.TRUE.equals(resp.getBody().enabled());
         } catch (Exception ex) {
             log.error("Error consultando estado de usuario {}: {}", usersServiceId, ex.getMessage());
             throw ex;
@@ -122,7 +122,7 @@ public class UsersServiceClient {
 
     // ─── Inner records (respuestas de users-service) ──────────────────────
 
-    public record UserStatusResponse(Long id, String estado) {}
+    public record UserStatusResponse(Long id, Boolean enabled) {}
 
     public record PermisoDto(Long id, String nombre) {}
 
