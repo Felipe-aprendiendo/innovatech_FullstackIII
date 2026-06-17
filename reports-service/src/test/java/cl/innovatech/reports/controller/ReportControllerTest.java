@@ -2,7 +2,9 @@ package cl.innovatech.reports.controller;
 
 import cl.innovatech.reports.dto.DashboardResponse;
 import cl.innovatech.reports.dto.KpiResponse;
+import cl.innovatech.reports.dto.ProjectReportResponse;
 import cl.innovatech.reports.dto.TaskReportResponse;
+import cl.innovatech.reports.exception.ForbiddenException;
 import cl.innovatech.reports.service.ReportService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -96,5 +98,72 @@ class ReportControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data[0].titulo").value("Mi tarea"));
+    }
+
+    @Test
+    void getDashboard_comoUser_retorna403() throws Exception {
+        given(reportService.getDashboard(any(), any()))
+                .willThrow(new ForbiddenException("Acceso denegado: se requiere ADMIN o PROJECT_LEAD"));
+
+        mockMvc.perform(get("/api/v1/reports/dashboard")
+                        .header("X-User-Id", "1")
+                        .header("X-User-Role", "USER"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void getProjectsReport_comoAdmin_retorna200() throws Exception {
+        List<ProjectReportResponse> report = List.of(
+                ProjectReportResponse.builder()
+                        .projectId(1L).nombreProyecto("Alpha")
+                        .totalTareas(5).tareasCompletadas(3).tareasEnProgreso(1).tareasPendientes(1)
+                        .porcentajeAvance(BigDecimal.valueOf(60.00))
+                        .build()
+        );
+
+        given(reportService.getProjectsReport(any(), any())).willReturn(report);
+
+        mockMvc.perform(get("/api/v1/reports/projects")
+                        .header("X-User-Id", "1")
+                        .header("X-User-Role", "ADMIN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].nombreProyecto").value("Alpha"));
+    }
+
+    @Test
+    void getAllKpis_comoAdmin_retorna200() throws Exception {
+        List<KpiResponse> kpis = List.of(
+                KpiResponse.builder()
+                        .projectId(1L).totalTareas(5).tareasCompletadas(5)
+                        .porcentajeAvance(BigDecimal.valueOf(100.00))
+                        .build()
+        );
+
+        given(reportService.getAllKpis(any(), any())).willReturn(kpis);
+
+        mockMvc.perform(get("/api/v1/reports/kpis")
+                        .header("X-User-Id", "1")
+                        .header("X-User-Role", "ADMIN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].tareasCompletadas").value(5));
+    }
+
+    @Test
+    void getTasksReport_retorna200() throws Exception {
+        List<TaskReportResponse> tareas = List.of(
+                TaskReportResponse.builder().taskId(1L).titulo("Tarea X").estado("COMPLETADA").build()
+        );
+
+        given(reportService.getTasksReport(any(), any())).willReturn(tareas);
+
+        mockMvc.perform(get("/api/v1/reports/tasks")
+                        .header("X-User-Id", "1")
+                        .header("X-User-Role", "PROJECT_LEAD"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].estado").value("COMPLETADA"));
     }
 }
