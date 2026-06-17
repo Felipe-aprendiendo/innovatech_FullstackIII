@@ -2,7 +2,9 @@ package cl.innovatech.reports.service;
 
 import cl.innovatech.reports.client.ProjectsClient;
 import cl.innovatech.reports.client.TasksClient;
+import cl.innovatech.reports.dto.DashboardResponse;
 import cl.innovatech.reports.dto.KpiResponse;
+import cl.innovatech.reports.dto.ProjectReportResponse;
 import cl.innovatech.reports.dto.TaskReportResponse;
 import cl.innovatech.reports.entity.KpiSnapshot;
 import cl.innovatech.reports.exception.ForbiddenException;
@@ -122,5 +124,82 @@ class ReportServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getTitulo()).isEqualTo("Mi tarea");
+    }
+
+    @Test
+    void getDashboard_comoAdmin_retornaDashboardConTotales() {
+        KpiSnapshot snapshot = KpiSnapshot.builder()
+                .id(1L).projectId(1L)
+                .totalTareas(5).tareasCompletadas(3).tareasEnProgreso(1).tareasPendientes(1)
+                .porcentajeAvance(BigDecimal.valueOf(60.00))
+                .calculadoAt(LocalDateTime.now())
+                .build();
+
+        given(kpiSnapshotRepository.findAllByOrderByCalculadoAtDesc()).willReturn(List.of(snapshot));
+        given(projectsClient.getProjectName(1L)).willReturn("Proyecto Alpha");
+
+        DashboardResponse result = reportService.getDashboard(1L, "ADMIN");
+
+        assertThat(result.getTotalProyectos()).isEqualTo(1);
+        assertThat(result.getTotalTareas()).isEqualTo(5);
+        assertThat(result.getTareasCompletadas()).isEqualTo(3);
+        assertThat(result.getTareasEnProgreso()).isEqualTo(1);
+    }
+
+    @Test
+    void getProjectsReport_comoUser_lanzaForbidden() {
+        assertThatThrownBy(() -> reportService.getProjectsReport(1L, "USER"))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void getProjectsReport_comoAdmin_retornaListaDeProyectos() {
+        KpiSnapshot snapshot = KpiSnapshot.builder()
+                .id(1L).projectId(2L)
+                .totalTareas(3).tareasCompletadas(1).tareasEnProgreso(1).tareasPendientes(1)
+                .porcentajeAvance(BigDecimal.valueOf(33.33))
+                .calculadoAt(LocalDateTime.now())
+                .build();
+
+        given(kpiSnapshotRepository.findAllByOrderByCalculadoAtDesc()).willReturn(List.of(snapshot));
+        given(projectsClient.getProjectName(2L)).willReturn("Proyecto Beta");
+
+        List<ProjectReportResponse> result = reportService.getProjectsReport(1L, "ADMIN");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getNombreProyecto()).isEqualTo("Proyecto Beta");
+    }
+
+    @Test
+    void getAllKpis_comoAdmin_retornaListaDeKpis() {
+        KpiSnapshot snapshot = KpiSnapshot.builder()
+                .id(1L).projectId(3L)
+                .totalTareas(2).tareasCompletadas(2).tareasEnProgreso(0).tareasPendientes(0)
+                .porcentajeAvance(BigDecimal.valueOf(100.00))
+                .calculadoAt(LocalDateTime.now())
+                .build();
+
+        given(kpiSnapshotRepository.findAllByOrderByCalculadoAtDesc()).willReturn(List.of(snapshot));
+
+        List<KpiResponse> result = reportService.getAllKpis(1L, "ADMIN");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getProjectId()).isEqualTo(3L);
+        assertThat(result.get(0).getPorcentajeAvance()).isEqualByComparingTo(BigDecimal.valueOf(100.00));
+    }
+
+    @Test
+    void getTasksReport_retornaTareasDeTodosLosProyectos() {
+        given(projectsClient.getAllProjectIds()).willReturn(List.of(1L, 2L));
+        given(tasksClient.getTasksByProject(1L)).willReturn(
+                List.of(TaskReportResponse.builder().taskId(1L).titulo("Tarea A").build())
+        );
+        given(tasksClient.getTasksByProject(2L)).willReturn(
+                List.of(TaskReportResponse.builder().taskId(2L).titulo("Tarea B").build())
+        );
+
+        List<TaskReportResponse> result = reportService.getTasksReport(1L, "PROJECT_LEAD");
+
+        assertThat(result).hasSize(2);
     }
 }
