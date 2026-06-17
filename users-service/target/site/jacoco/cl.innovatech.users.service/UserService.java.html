@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Innovatech Users Service</a> &gt; <a href="index.source.html" class="el_package">cl.innovatech.users.service</a> &gt; <span class="el_source">UserService.java</span></div><h1>UserService.java</h1><pre class="source lang-java linenums">package cl.innovatech.users.service;
+
+import cl.innovatech.users.dto.*;
+import cl.innovatech.users.entity.*;
+import cl.innovatech.users.exception.ResourceNotFoundException;
+import cl.innovatech.users.exception.EmailAlreadyExistsException;
+import cl.innovatech.users.repository.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class UserService {
+
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Transactional(readOnly = true)
+    public List&lt;UserResponseDTO&gt; findAll() {
+<span class="fc" id="L26">        return userRepository.findAll()</span>
+<span class="fc" id="L27">                .stream()</span>
+<span class="fc" id="L28">                .map(this::toResponse)</span>
+<span class="fc" id="L29">                .collect(Collectors.toList());</span>
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponseDTO findById(Long id) {
+<span class="fc" id="L34">        User user = userRepository.findById(id)</span>
+<span class="fc" id="L35">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Usuario no encontrado con id: &quot; + id));</span>
+<span class="fc" id="L36">        return toResponse(user);</span>
+    }
+
+    @Transactional
+    public UserResponseDTO create(UserRequestDTO dto) {
+<span class="fc bfc" id="L41" title="All 2 branches covered.">        if (userRepository.existsByEmail(dto.getEmail())) {</span>
+<span class="fc" id="L42">            throw new EmailAlreadyExistsException(&quot;El email ya está registrado: &quot; + dto.getEmail());</span>
+        }
+
+<span class="fc" id="L45">        Set&lt;Role&gt; roles = resolveRoles(dto.getRoleIds());</span>
+
+<span class="fc" id="L47">        User user = User.builder()</span>
+<span class="fc" id="L48">                .name(dto.getName())</span>
+<span class="fc" id="L49">                .lastName(dto.getLastName())</span>
+<span class="fc" id="L50">                .email(dto.getEmail())</span>
+<span class="fc" id="L51">                .password(passwordEncoder.encode(dto.getPassword()))</span>
+<span class="fc" id="L52">                .roles(roles)</span>
+<span class="fc" id="L53">                .build();</span>
+
+<span class="fc" id="L55">        return toResponse(userRepository.save(user));</span>
+    }
+
+    @Transactional
+    public UserResponseDTO update(Long id, UserRequestDTO dto) {
+<span class="fc" id="L60">        User user = userRepository.findById(id)</span>
+<span class="fc" id="L61">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Usuario no encontrado con id: &quot; + id));</span>
+
+<span class="pc bpc" id="L63" title="1 of 4 branches missed.">        if (!user.getEmail().equals(dto.getEmail()) &amp;&amp; userRepository.existsByEmail(dto.getEmail())) {</span>
+<span class="fc" id="L64">            throw new EmailAlreadyExistsException(&quot;El email ya está en uso: &quot; + dto.getEmail());</span>
+        }
+
+<span class="fc" id="L67">        user.setName(dto.getName());</span>
+<span class="fc" id="L68">        user.setLastName(dto.getLastName());</span>
+<span class="fc" id="L69">        user.setEmail(dto.getEmail());</span>
+
+<span class="pc bpc" id="L71" title="1 of 4 branches missed.">        if (dto.getPassword() != null &amp;&amp; !dto.getPassword().isBlank()) {</span>
+<span class="fc" id="L72">            user.setPassword(passwordEncoder.encode(dto.getPassword()));</span>
+        }
+
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">        if (dto.getRoleIds() != null) {</span>
+<span class="nc" id="L76">            user.setRoles(resolveRoles(dto.getRoleIds()));</span>
+        }
+
+<span class="fc" id="L79">        return toResponse(userRepository.save(user));</span>
+    }
+
+    @Transactional
+    public void delete(Long id) {
+<span class="fc bfc" id="L84" title="All 2 branches covered.">        if (!userRepository.existsById(id)) {</span>
+<span class="fc" id="L85">            throw new ResourceNotFoundException(&quot;Usuario no encontrado con id: &quot; + id);</span>
+        }
+<span class="fc" id="L87">        userRepository.deleteById(id);</span>
+<span class="fc" id="L88">    }</span>
+
+    @Transactional
+    public UserResponseDTO toggleEnabled(Long id) {
+<span class="fc" id="L92">        User user = userRepository.findById(id)</span>
+<span class="fc" id="L93">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Usuario no encontrado con id: &quot; + id));</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">        user.setEnabled(!user.getEnabled());</span>
+<span class="fc" id="L95">        return toResponse(userRepository.save(user));</span>
+    }
+
+    // --- Mappers ---
+
+    private Set&lt;Role&gt; resolveRoles(Set&lt;Long&gt; roleIds) {
+<span class="pc bpc" id="L101" title="1 of 4 branches missed.">        if (roleIds == null || roleIds.isEmpty()) return new HashSet&lt;&gt;();</span>
+<span class="fc" id="L102">        return roleIds.stream()</span>
+<span class="fc" id="L103">                .map(rid -&gt; roleRepository.findById(rid)</span>
+<span class="pc" id="L104">                        .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Rol no encontrado con id: &quot; + rid)))</span>
+<span class="fc" id="L105">                .collect(Collectors.toSet());</span>
+    }
+
+    public UserResponseDTO toResponse(User u) {
+<span class="fc" id="L109">        return UserResponseDTO.builder()</span>
+<span class="fc" id="L110">                .id(u.getId())</span>
+<span class="fc" id="L111">                .name(u.getName())</span>
+<span class="fc" id="L112">                .lastName(u.getLastName())</span>
+<span class="fc" id="L113">                .email(u.getEmail())</span>
+<span class="fc" id="L114">                .enabled(u.getEnabled())</span>
+<span class="fc" id="L115">                .roles(u.getRoles().stream()</span>
+<span class="fc" id="L116">                        .map(r -&gt; RoleResponseDTO.builder()</span>
+<span class="fc" id="L117">                                .id(r.getId())</span>
+<span class="fc" id="L118">                                .name(r.getName())</span>
+<span class="fc" id="L119">                                .description(r.getDescription())</span>
+<span class="fc" id="L120">                                .permissions(r.getPermissions().stream()</span>
+<span class="pc" id="L121">                                        .map(p -&gt; PermissionResponseDTO.builder()</span>
+<span class="nc" id="L122">                                                .id(p.getId())</span>
+<span class="nc" id="L123">                                                .name(p.getName())</span>
+<span class="nc" id="L124">                                                .description(p.getDescription())</span>
+<span class="nc" id="L125">                                                .build())</span>
+<span class="fc" id="L126">                                        .collect(Collectors.toSet()))</span>
+<span class="fc" id="L127">                                .build())</span>
+<span class="fc" id="L128">                        .collect(Collectors.toSet()))</span>
+<span class="fc" id="L129">                .createdAt(u.getCreatedAt())</span>
+<span class="fc" id="L130">                .updatedAt(u.getUpdatedAt())</span>
+<span class="fc" id="L131">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

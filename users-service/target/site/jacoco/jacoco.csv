@@ -1,0 +1,12 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+Innovatech Users Service,cl.innovatech.users.config,SecurityConfig,56,0,0,0,13,0,6,0,6,0
+Innovatech Users Service,cl.innovatech.users.controller,RoleController,33,0,0,0,6,0,5,0,5,0
+Innovatech Users Service,cl.innovatech.users.controller,PermissionController,39,0,0,0,9,0,6,0,6,0
+Innovatech Users Service,cl.innovatech.users.controller,UserController,0,45,0,0,0,10,0,7,0,7
+Innovatech Users Service,cl.innovatech.users.exception,EmailAlreadyExistsException,0,4,0,0,0,1,0,1,0,1
+Innovatech Users Service,cl.innovatech.users.exception,ResourceNotFoundException,0,4,0,0,0,1,0,1,0,1
+Innovatech Users Service,cl.innovatech.users.exception,GlobalExceptionHandler,0,45,0,0,0,11,0,5,0,5
+Innovatech Users Service,cl.innovatech.users.service,RoleService,6,170,2,6,1,33,2,14,0,12
+Innovatech Users Service,cl.innovatech.users.service,UserService,25,281,4,16,5,61,6,19,2,13
+Innovatech Users Service,cl.innovatech.users.service,PermissionService,0,107,0,2,0,28,0,9,0,8
+Innovatech Users Service,cl.innovatech.users,UsersServiceApplication,8,0,0,0,3,0,2,0,2,0

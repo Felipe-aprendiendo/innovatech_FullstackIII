@@ -1,0 +1,6 @@
+cl\innovatech\auth\JwtServiceTest.class
+cl\innovatech\auth\AuthServiceTest$Login.class
+cl\innovatech\auth\TokenBlacklistHashTest.class
+cl\innovatech\auth\AuthServiceTest$Registrar.class
+cl\innovatech\auth\AuthServiceTest$BloqueoLogic.class
+cl\innovatech\auth\AuthServiceTest.class

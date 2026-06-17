@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Innovatech Users Service</a> &gt; <a href="index.source.html" class="el_package">cl.innovatech.users.controller</a> &gt; <span class="el_source">RoleController.java</span></div><h1>RoleController.java</h1><pre class="source lang-java linenums">package cl.innovatech.users.controller;
+
+import cl.innovatech.users.dto.*;
+import cl.innovatech.users.service.RoleService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/v1/roles&quot;)
+@RequiredArgsConstructor
+@Tag(name = &quot;Roles&quot;, description = &quot;CRUD de roles&quot;)
+public class RoleController {
+
+    private final RoleService roleService;
+
+    @GetMapping
+    @Operation(summary = &quot;Listar roles&quot;)
+    public ResponseEntity&lt;List&lt;RoleResponseDTO&gt;&gt; findAll() {
+<span class="nc" id="L25">        return ResponseEntity.ok(roleService.findAll());</span>
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    @Operation(summary = &quot;Obtener rol por ID&quot;)
+    public ResponseEntity&lt;RoleResponseDTO&gt; findById(@PathVariable Long id) {
+<span class="nc" id="L31">        return ResponseEntity.ok(roleService.findById(id));</span>
+    }
+
+    @PostMapping
+    @Operation(summary = &quot;Crear rol&quot;)
+    public ResponseEntity&lt;RoleResponseDTO&gt; create(@Valid @RequestBody RoleRequestDTO dto) {
+<span class="nc" id="L37">        return ResponseEntity.status(HttpStatus.CREATED).body(roleService.create(dto));</span>
+    }
+
+    @PutMapping(&quot;/{id}&quot;)
+    @Operation(summary = &quot;Actualizar rol&quot;)
+    public ResponseEntity&lt;RoleResponseDTO&gt; update(@PathVariable Long id,
+                                                   @Valid @RequestBody RoleRequestDTO dto) {
+<span class="nc" id="L44">        return ResponseEntity.ok(roleService.update(id, dto));</span>
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    @Operation(summary = &quot;Eliminar rol&quot;)
+    public ResponseEntity&lt;Void&gt; delete(@PathVariable Long id) {
+<span class="nc" id="L50">        roleService.delete(id);</span>
+<span class="nc" id="L51">        return ResponseEntity.noContent().build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
