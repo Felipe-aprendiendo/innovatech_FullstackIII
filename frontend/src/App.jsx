@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import Login from './components/Login'
+import ProtectedRoute from './components/ProtectedRoute'
+import Navbar from './components/Navbar'
 import ProjectCard from './components/ProjectCard'
 import ProjectFormModal from './components/ProjectFormModal'
+import { useFetch } from './hooks/useFetch'
 
 const PROJECTS_API_URL =
   import.meta.env.VITE_PROJECTS_API_URL ?? 'http://localhost:8003/api/v1/projects'
@@ -20,7 +25,7 @@ const initialProjectForm = {
   responsableId: '',
 }
 
-function App() {
+function ProjectsPage() {
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [criterioOrden, setCriterioOrden] = useState('prioridad')
@@ -29,6 +34,7 @@ function App() {
   const [isCreatingProject, setIsCreatingProject] = useState(false)
   const [projectForm, setProjectForm] = useState(initialProjectForm)
   const [createProjectError, setCreateProjectError] = useState('')
+  const { fetchWithToken } = useFetch()
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -36,13 +42,7 @@ function App() {
         setLoading(true)
         setErrorMessage('')
 
-        const response = await fetch(PROJECTS_API_URL)
-
-        if (!response.ok) {
-          throw new Error('No se pudieron obtener los proyectos.')
-        }
-
-        const data = await response.json()
+        const data = await fetchWithToken(PROJECTS_API_URL)
         setProjects(Array.isArray(data) ? data : [])
       } catch (error) {
         setErrorMessage(error.message || 'Ocurrio un error al cargar los proyectos.')
@@ -52,7 +52,7 @@ function App() {
     }
 
     fetchProjects()
-  }, [])
+  }, [fetchWithToken])
 
   const openProjectForm = () => {
     setCreateProjectError('')
@@ -99,19 +99,10 @@ function App() {
         responsableId: Number(projectForm.responsableId),
       }
 
-      const response = await fetch(PROJECTS_API_URL, {
+      const createdProject = await fetchWithToken(PROJECTS_API_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(payload),
       })
-
-      if (!response.ok) {
-        throw new Error('No se pudo crear el proyecto.')
-      }
-
-      const createdProject = await response.json()
 
       setProjects((currentProjects) => [createdProject, ...currentProjects])
       setIsProjectFormOpen(false)
@@ -135,7 +126,9 @@ function App() {
   })
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,204,21,0.20),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#e2e8f0_52%,_#cbd5e1_100%)] text-slate-900">
+    <>
+      <Navbar />
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,204,21,0.20),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#e2e8f0_52%,_#cbd5e1_100%)] text-slate-900">
       <section className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-10 sm:px-8 lg:px-12">
         <div className="mb-8 flex flex-col gap-6 rounded-[2rem] border border-white/60 bg-white/70 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)] backdrop-blur xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
@@ -243,7 +236,40 @@ function App() {
         onChange={handleProjectFormChange}
         onSubmit={handleCreateProject}
       />
-    </main>
+    </>
+  )
+}
+
+function AppContent() {
+  const { isAuthenticated, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Inicializando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={() => {}} />
+  }
+
+  return (
+    <ProtectedRoute>
+      <ProjectsPage />
+    </ProtectedRoute>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 
