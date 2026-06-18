@@ -333,4 +333,165 @@ class TaskEntityTest {
 
         assertThat(comment1.hashCode()).isEqualTo(comment2.hashCode());
     }
+
+    // ─── Additional Entity Coverage Tests ─────────────────────────
+
+    @Test
+    void task_setters_actualizanPropiedades() {
+        Task task = new Task();
+
+        task.setId(99L);
+        task.setTitulo("Nuevo título");
+        task.setDescripcion("Nueva descripción");
+        task.setEstado(Task.EstadoTarea.EN_PROGRESO);
+        task.setPrioridad(Task.PrioridadTarea.BAJA);
+        task.setFechaLimite(LocalDate.of(2026, 12, 25));
+        task.setProjectId(5L);
+        task.setResponsableId(10L);
+        task.setCreatedBy(1L);
+
+        assertThat(task.getId()).isEqualTo(99L);
+        assertThat(task.getTitulo()).isEqualTo("Nuevo título");
+        assertThat(task.getDescripcion()).isEqualTo("Nueva descripción");
+        assertThat(task.getEstado()).isEqualTo(Task.EstadoTarea.EN_PROGRESO);
+        assertThat(task.getPrioridad()).isEqualTo(Task.PrioridadTarea.BAJA);
+        assertThat(task.getFechaLimite()).isEqualTo(LocalDate.of(2026, 12, 25));
+        assertThat(task.getProjectId()).isEqualTo(5L);
+        assertThat(task.getResponsableId()).isEqualTo(10L);
+        assertThat(task.getCreatedBy()).isEqualTo(1L);
+    }
+
+    @Test
+    void task_conTodosPrioridades_creaSinProblemas() {
+        for (Task.PrioridadTarea prioridad : Task.PrioridadTarea.values()) {
+            Task task = Task.builder()
+                    .id(1L)
+                    .titulo("Test")
+                    .prioridad(prioridad)
+                    .build();
+
+            assertThat(task.getPrioridad()).isEqualTo(prioridad);
+        }
+    }
+
+    @Test
+    void task_conTodosEstados_creaSinProblemas() {
+        for (Task.EstadoTarea estado : Task.EstadoTarea.values()) {
+            Task task = Task.builder()
+                    .id(1L)
+                    .titulo("Test")
+                    .estado(estado)
+                    .build();
+
+            assertThat(task.getEstado()).isEqualTo(estado);
+        }
+    }
+
+    @Test
+    void task_notEqual_cuandoIdssonDiferentes() {
+        Task task1 = Task.builder().id(1L).titulo("Test").build();
+        Task task2 = Task.builder().id(2L).titulo("Test").build();
+
+        assertThat(task1).isNotEqualTo(task2);
+    }
+
+    @Test
+    void task_notEqual_cuandoNull() {
+        Task task = Task.builder().id(1L).titulo("Test").build();
+
+        assertThat(task).isNotEqualTo(null);
+    }
+
+    @Test
+    void task_equals_conMismoObjeto() {
+        Task task = Task.builder().id(1L).titulo("Test").build();
+
+        assertThat(task).isEqualTo(task);
+    }
+
+    @Test
+    void task_actualizaCreatedAtAlCrear() {
+        LocalDateTime now = LocalDateTime.now();
+        Task task = Task.builder()
+                .id(1L)
+                .titulo("Test")
+                .createdAt(now)
+                .build();
+
+        assertThat(task.getCreatedAt()).isEqualTo(now);
+    }
+
+    @Test
+    void task_actualizaUpdatedAtAlActualizar() {
+        LocalDateTime updated = LocalDateTime.now();
+        Task task = Task.builder()
+                .id(1L)
+                .titulo("Test")
+                .updatedAt(updated)
+                .build();
+
+        assertThat(task.getUpdatedAt()).isEqualTo(updated);
+    }
+
+    @Test
+    void taskComment_setters_actualizanPropiedades() {
+        TaskComment comment = new TaskComment();
+        Task task = Task.builder().id(1L).build();
+
+        comment.setId(50L);
+        comment.setTask(task);
+        comment.setUserId(100L);
+        comment.setContenido("Nuevo contenido");
+        comment.setCreatedAt(LocalDateTime.now());
+
+        assertThat(comment.getId()).isEqualTo(50L);
+        assertThat(comment.getTask()).isEqualTo(task);
+        assertThat(comment.getUserId()).isEqualTo(100L);
+        assertThat(comment.getContenido()).isEqualTo("Nuevo contenido");
+        assertThat(comment.getCreatedAt()).isNotNull();
+    }
+
+    @Test
+    void taskComment_notEqual_cuandoIdssonDiferentes() {
+        TaskComment comment1 = TaskComment.builder().id(1L).contenido("Test").build();
+        TaskComment comment2 = TaskComment.builder().id(2L).contenido("Test").build();
+
+        assertThat(comment1).isNotEqualTo(comment2);
+    }
+
+    @Test
+    void taskComment_notEqual_cuandoNull() {
+        TaskComment comment = TaskComment.builder().id(1L).build();
+
+        assertThat(comment).isNotEqualTo(null);
+    }
+
+    @Test
+    void taskComment_equals_conMismoObjeto() {
+        TaskComment comment = TaskComment.builder().id(1L).build();
+
+        assertThat(comment).isEqualTo(comment);
+    }
+
+    @Test
+    void task_conFechaLimiteNull_aceptaNull() {
+        Task task = Task.builder()
+                .id(1L)
+                .titulo("Test")
+                .fechaLimite(null)
+                .build();
+
+        assertThat(task.getFechaLimite()).isNull();
+    }
+
+    @Test
+    void task_conDescripcionVacia_aceptaVacia() {
+        Task task = Task.builder()
+                .id(1L)
+                .titulo("Test")
+                .descripcion("")
+                .build();
+
+        assertThat(task.getDescripcion()).isEmpty();
+    }
 }

@@ -2,9 +2,12 @@ package cl.innovatech.tasks.dto;
 
 import cl.innovatech.tasks.entity.Task;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -238,5 +241,261 @@ class TaskDtoTest {
                 .build();
 
         assertThat(response1.hashCode()).isEqualTo(response2.hashCode());
+    }
+
+    // ─── Extended TaskResponse Tests ────────────────────────────────
+
+    @Test
+    void taskResponse_conComentariosMultiples_mantieneLaLista() {
+        CommentResponse comment1 = CommentResponse.builder().id(1L).build();
+        CommentResponse comment2 = CommentResponse.builder().id(2L).build();
+        List<CommentResponse> comentarios = List.of(comment1, comment2);
+
+        TaskResponse response = TaskResponse.builder()
+                .comentarios(comentarios)
+                .build();
+
+        assertThat(response.getComentarios()).hasSize(2);
+        assertThat(response.getComentarios()).containsExactly(comment1, comment2);
+    }
+
+    @Test
+    void taskResponse_conComentariosNull_permiteNull() {
+        TaskResponse response = TaskResponse.builder()
+                .comentarios(null)
+                .build();
+
+        assertThat(response.getComentarios()).isNull();
+    }
+
+    @Test
+    void taskResponse_modificarComentarios_setYGetFuncionan() {
+        TaskResponse response = new TaskResponse();
+        List<CommentResponse> comentarios = new ArrayList<>();
+
+        response.setComentarios(comentarios);
+        assertThat(response.getComentarios()).isEqualTo(comentarios);
+    }
+
+    @Test
+    void taskResponse_conEstadosVariados_almacenaCorrectamente() {
+        for (Task.EstadoTarea estado : Task.EstadoTarea.values()) {
+            TaskResponse response = TaskResponse.builder()
+                    .estado(estado)
+                    .build();
+
+            assertThat(response.getEstado()).isEqualTo(estado);
+        }
+    }
+
+    @Test
+    void taskResponse_conPrioridadesVariadas_almacenaCorrectamente() {
+        for (Task.PrioridadTarea prioridad : Task.PrioridadTarea.values()) {
+            TaskResponse response = TaskResponse.builder()
+                    .prioridad(prioridad)
+                    .build();
+
+            assertThat(response.getPrioridad()).isEqualTo(prioridad);
+        }
+    }
+
+    // ─── Extended CreateTaskRequest Tests ──────────────────────────
+
+    @Test
+    void createTaskRequest_conTodosLosValoresNull_estaVacio() {
+        CreateTaskRequest request = new CreateTaskRequest();
+
+        assertThat(request.getTitulo()).isNull();
+        assertThat(request.getDescripcion()).isNull();
+        assertThat(request.getPrioridad()).isNull();
+        assertThat(request.getFechaLimite()).isNull();
+        assertThat(request.getProjectId()).isNull();
+        assertThat(request.getResponsableId()).isNull();
+    }
+
+    @Test
+    void createTaskRequest_modificarMultiplesCampos_settersIndependientes() {
+        CreateTaskRequest request = new CreateTaskRequest();
+
+        request.setTitulo("Titulo");
+        request.setProjectId(100L);
+
+        assertThat(request.getTitulo()).isEqualTo("Titulo");
+        assertThat(request.getProjectId()).isEqualTo(100L);
+        assertThat(request.getResponsableId()).isNull();
+    }
+
+    @Test
+    void createTaskRequest_conDescripcionNull_estaPermitido() {
+        CreateTaskRequest request = new CreateTaskRequest();
+        request.setTitulo("Titulo");
+        request.setProjectId(1L);
+        request.setResponsableId(1L);
+
+        assertThat(request.getDescripcion()).isNull();
+    }
+
+    @Test
+    void createTaskRequest_conFechaLimiteNull_estaPermitido() {
+        CreateTaskRequest request = new CreateTaskRequest();
+        request.setTitulo("Titulo");
+        request.setFechaLimite(null);
+
+        assertThat(request.getFechaLimite()).isNull();
+    }
+
+    // ─── Extended UpdateTaskRequest Tests ──────────────────────────
+
+    @Test
+    void updateTaskRequest_sololoConTitulo_otrosCamposNull() {
+        UpdateTaskRequest request = new UpdateTaskRequest();
+        request.setTitulo("Nuevo Titulo");
+
+        assertThat(request.getTitulo()).isEqualTo("Nuevo Titulo");
+        assertThat(request.getDescripcion()).isNull();
+        assertThat(request.getPrioridad()).isNull();
+        assertThat(request.getResponsableId()).isNull();
+    }
+
+    @Test
+    void updateTaskRequest_conMultiplosCampos_settersIndependientes() {
+        UpdateTaskRequest request = new UpdateTaskRequest();
+
+        request.setTitulo("Titulo");
+        request.setPrioridad(Task.PrioridadTarea.BAJA);
+        request.setResponsableId(50L);
+
+        assertThat(request.getTitulo()).isEqualTo("Titulo");
+        assertThat(request.getPrioridad()).isEqualTo(Task.PrioridadTarea.BAJA);
+        assertThat(request.getResponsableId()).isEqualTo(50L);
+        assertThat(request.getDescripcion()).isNull();
+    }
+
+    // ─── Extended UpdateStatusRequest Tests ────────────────────────
+
+    @Test
+    void updateStatusRequest_conTodosLosEstados_funcionaParaCadaUno() {
+        for (Task.EstadoTarea estado : Task.EstadoTarea.values()) {
+            UpdateStatusRequest request = new UpdateStatusRequest();
+            request.setNuevoEstado(estado);
+
+            assertThat(request.getNuevoEstado()).isEqualTo(estado);
+        }
+    }
+
+    @Test
+    void updateStatusRequest_modificandoEstadoMultiplesVeces_ultimoValorWins() {
+        UpdateStatusRequest request = new UpdateStatusRequest();
+
+        request.setNuevoEstado(Task.EstadoTarea.PENDIENTE);
+        request.setNuevoEstado(Task.EstadoTarea.EN_PROGRESO);
+        request.setNuevoEstado(Task.EstadoTarea.COMPLETADA);
+
+        assertThat(request.getNuevoEstado()).isEqualTo(Task.EstadoTarea.COMPLETADA);
+    }
+
+    // ─── Extended CommentResponse Tests ────────────────────────────
+
+    @Test
+    void commentResponse_conTodosLosValores_mantieneLaIntegridad() {
+        LocalDateTime now = LocalDateTime.now();
+
+        CommentResponse response = CommentResponse.builder()
+                .id(1L)
+                .taskId(5L)
+                .userId(10L)
+                .contenido("Contenido largo que podría ser un comentario real en la aplicación")
+                .createdAt(now)
+                .build();
+
+        assertThat(response.getId()).isEqualTo(1L);
+        assertThat(response.getTaskId()).isEqualTo(5L);
+        assertThat(response.getUserId()).isEqualTo(10L);
+        assertThat(response.getContenido())
+                .isEqualTo("Contenido largo que podría ser un comentario real en la aplicación");
+        assertThat(response.getCreatedAt()).isEqualTo(now);
+    }
+
+    @Test
+    void commentResponse_conContenidoVacio_estaPermitido() {
+        CommentResponse response = CommentResponse.builder()
+                .id(1L)
+                .contenido("")
+                .build();
+
+        assertThat(response.getContenido()).isEmpty();
+    }
+
+    @Test
+    void commentResponse_modificandoTaskId_setYGetFuncionan() {
+        CommentResponse response = new CommentResponse();
+        response.setTaskId(100L);
+
+        assertThat(response.getTaskId()).isEqualTo(100L);
+    }
+
+    // ─── Extended CommentRequest Tests ────────────────────────────
+
+    @Test
+    void commentRequest_conContenidoVacio_estaPermitido() {
+        CommentRequest request = new CommentRequest();
+        request.setContenido("");
+
+        assertThat(request.getContenido()).isEmpty();
+    }
+
+    @Test
+    void commentRequest_conContenidoNull_estaPermitido() {
+        CommentRequest request = new CommentRequest();
+        request.setContenido(null);
+
+        assertThat(request.getContenido()).isNull();
+    }
+
+    @Test
+    void commentRequest_conContenidoMuyLargo_seAlmacenaCompleto() {
+        CommentRequest request = new CommentRequest();
+        String contenidoLargo = "a".repeat(1000);
+        request.setContenido(contenidoLargo);
+
+        assertThat(request.getContenido()).hasSize(1000);
+        assertThat(request.getContenido()).isEqualTo(contenidoLargo);
+    }
+
+    // ─── Null Safety Tests ────────────────────────────────────────
+
+    @Test
+    void taskResponse_todosCamposNull_funcionaCorrectamente() {
+        TaskResponse response = new TaskResponse(null, null, null, null, null, null, null, null, null, null, null, null);
+
+        assertThat(response.getId()).isNull();
+        assertThat(response.getTitulo()).isNull();
+        assertThat(response.getComentarios()).isNull();
+    }
+
+    @Test
+    void createTaskRequest_conTituloCortisimo_estaPermitido() {
+        CreateTaskRequest request = new CreateTaskRequest();
+        request.setTitulo("a");
+
+        assertThat(request.getTitulo()).isEqualTo("a");
+    }
+
+    @Test
+    void updateTaskRequest_conFechaFutura_seAlmacenaCorrectamente() {
+        UpdateTaskRequest request = new UpdateTaskRequest();
+        LocalDate futuro = LocalDate.now().plusYears(10);
+        request.setFechaLimite(futuro);
+
+        assertThat(request.getFechaLimite()).isEqualTo(futuro);
+    }
+
+    @Test
+    void updateTaskRequest_conFechaPasada_seAlmacenaCorrectamente() {
+        UpdateTaskRequest request = new UpdateTaskRequest();
+        LocalDate pasado = LocalDate.now().minusYears(1);
+        request.setFechaLimite(pasado);
+
+        assertThat(request.getFechaLimite()).isEqualTo(pasado);
     }
 }

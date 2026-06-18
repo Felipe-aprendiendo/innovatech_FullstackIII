@@ -305,4 +305,73 @@ class ExceptionTests {
         assertThat(ex.getStackTrace()).isNotNull();
         assertThat(ex.getStackTrace().length).isGreaterThan(0);
     }
+
+    @Test
+    void handleUnexpected_conExcepcionGeneral_retorna500() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        Exception ex = new Exception("Error inesperado general");
+
+        ResponseEntity<ApiResponse<Void>> response = handler.handleUnexpected(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getBody()).isNotNull();
+    }
+
+    @Test
+    void handleValidation_conMultiplesErrores_retorna400() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+
+        FieldError error1 = new FieldError("object", "field1", "Error 1");
+        FieldError error2 = new FieldError("object", "field2", "Error 2");
+        List<FieldError> errors = new ArrayList<>();
+        errors.add(error1);
+        errors.add(error2);
+
+        BindingResult bindingResult = mock(BindingResult.class);
+        when(bindingResult.getFieldErrors()).thenReturn(errors);
+
+        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+        when(ex.getBindingResult()).thenReturn(bindingResult);
+
+        ResponseEntity<ApiResponse<Void>> response = handler.handleValidation(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void exceptionResponseFormato_conSuccess_false() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        ResourceNotFoundException ex = new ResourceNotFoundException("No encontrado");
+
+        ResponseEntity<ApiResponse<Void>> response = handler.handleNotFound(ex);
+
+        assertThat(response.getBody().isSuccess()).isFalse();
+    }
+
+    @Test
+    void exceptionResponseFormato_conMensaje() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        ResourceNotFoundException ex = new ResourceNotFoundException("Recurso específico no encontrado");
+
+        ResponseEntity<ApiResponse<Void>> response = handler.handleNotFound(ex);
+
+        assertThat(response.getBody().getMessage()).contains("específico");
+    }
+
+    @Test
+    void forbiddenException_conMensajeVacio_seCreaCorrecto() {
+        ForbiddenException ex = new ForbiddenException("");
+
+        assertThat(ex.getMessage()).isEmpty();
+        assertThat(ex).isInstanceOf(InnovatechException.class);
+    }
+
+    @Test
+    void invalidStateTransitionException_conMensajeCompleto() {
+        String mensaje = "No se puede transicionar de COMPLETADA a EN_PROGRESO porque ya fue completada";
+        InvalidStateTransitionException ex = new InvalidStateTransitionException(mensaje);
+
+        assertThat(ex.getMessage()).isEqualTo(mensaje);
+        assertThat(ex.getMessage().length()).isGreaterThan(50);
+    }
 }

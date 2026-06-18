@@ -20,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -402,6 +403,247 @@ class TaskServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getId()).isEqualTo(1L);
+    }
+
+    // ── Additional service tests ──────────────────────────────────────────────
+
+    @Test
+    void create_comoProjectLead_creaExitosamente() {
+        CreateTaskRequest request = new CreateTaskRequest();
+        request.setTitulo("Tarea de proyecto");
+        request.setProjectId(1L);
+        request.setResponsableId(2L);
+
+        Task savedTask = buildTask(1L, EstadoTarea.PENDIENTE, 2L);
+        given(projectsClient.projectExists(1L)).willReturn(true);
+        given(usersClient.userExists(2L)).willReturn(true);
+        given(taskRepository.save(any(Task.class))).willReturn(savedTask);
+
+        TaskResponse result = taskService.create(request, 5L, "PROJECT_LEAD");
+
+        assertThat(result.getId()).isEqualTo(1L);
+        verify(taskRepository).save(any(Task.class));
+    }
+
+    @Test
+    void findById_comoUserResponsable_retornaTarea() {
+        Task task = buildTask(1L, EstadoTarea.PENDIENTE, 5L);
+        given(taskRepository.findById(1L)).willReturn(Optional.of(task));
+        given(commentRepository.findByTaskIdOrderByCreatedAtAsc(1L)).willReturn(List.of());
+
+        var result = taskService.findById(1L, 5L, "USER");
+
+        assertThat(result.getId()).isEqualTo(1L);
+    }
+
+    @Test
+    void findById_comoProjectLead_retornaTarea() {
+        Task task = buildTask(1L, EstadoTarea.PENDIENTE, 5L);
+        given(taskRepository.findById(1L)).willReturn(Optional.of(task));
+        given(commentRepository.findByTaskIdOrderByCreatedAtAsc(1L)).willReturn(List.of());
+
+        var result = taskService.findById(1L, 99L, "PROJECT_LEAD");
+
+        assertThat(result.getId()).isEqualTo(1L);
+    }
+
+    @Test
+    void update_actualizaTitulo() {
+        Task task = buildTask(1L, EstadoTarea.PENDIENTE, 5L);
+        UpdateTaskRequest request = new UpdateTaskRequest();
+        request.setTitulo("Nuevo título");
+
+        given(taskRepository.findById(1L)).willReturn(Optional.of(task));
+        given(taskRepository.save(any())).willReturn(task);
+
+        taskService.update(1L, request, 5L, "USER");
+
+        verify(taskRepository).save(any(Task.class));
+    }
+
+    @Test
+    void update_actualizaDescripcion() {
+        Task task = buildTask(1L, EstadoTarea.PENDIENTE, 5L);
+        UpdateTaskRequest request = new UpdateTaskRequest();
+        request.setDescripcion("Nueva descripción");
+
+        given(taskRepository.findById(1L)).willReturn(Optional.of(task));
+        given(taskRepository.save(any())).willReturn(task);
+
+        taskService.update(1L, request, 5L, "USER");
+
+        verify(taskRepository).save(any(Task.class));
+    }
+
+    @Test
+    void update_actualizaPrioridad() {
+        Task task = buildTask(1L, EstadoTarea.PENDIENTE, 5L);
+        UpdateTaskRequest request = new UpdateTaskRequest();
+        request.setPrioridad(Task.PrioridadTarea.ALTA);
+
+        given(taskRepository.findById(1L)).willReturn(Optional.of(task));
+        given(taskRepository.save(any())).willReturn(task);
+
+        taskService.update(1L, request, 1L, "ADMIN");
+
+        verify(taskRepository).save(any(Task.class));
+    }
+
+    @Test
+    void update_actualizaFechaLimite() {
+        Task task = buildTask(1L, EstadoTarea.PENDIENTE, 5L);
+        UpdateTaskRequest request = new UpdateTaskRequest();
+        request.setFechaLimite(LocalDate.of(2026, 12, 31));
+
+        given(taskRepository.findById(1L)).willReturn(Optional.of(task));
+        given(taskRepository.save(any())).willReturn(task);
+
+        taskService.update(1L, request, 1L, "ADMIN");
+
+        verify(taskRepository).save(any(Task.class));
+    }
+
+    @Test
+    void update_actualizaResponsable() {
+        Task task = buildTask(1L, EstadoTarea.PENDIENTE, 5L);
+        UpdateTaskRequest request = new UpdateTaskRequest();
+        request.setResponsableId(10L);
+
+        given(taskRepository.findById(1L)).willReturn(Optional.of(task));
+        given(usersClient.userExists(10L)).willReturn(true);
+        given(taskRepository.save(any())).willReturn(task);
+
+        taskService.update(1L, request, 1L, "ADMIN");
+
+        verify(taskRepository).save(any(Task.class));
+    }
+
+    @Test
+    void update_responsableNoExiste_lanzaNotFound() {
+        Task task = buildTask(1L, EstadoTarea.PENDIENTE, 5L);
+        UpdateTaskRequest request = new UpdateTaskRequest();
+        request.setResponsableId(99L);
+
+        given(taskRepository.findById(1L)).willReturn(Optional.of(task));
+        given(usersClient.userExists(99L)).willReturn(false);
+
+        assertThatThrownBy(() -> taskService.update(1L, request, 1L, "ADMIN"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void update_tareaNoExiste_lanzaNotFound() {
+        given(taskRepository.findById(99L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> taskService.update(99L, new UpdateTaskRequest(), 1L, "ADMIN"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void updateStatus_tareaNoExiste_lanzaNotFound() {
+        given(taskRepository.findById(99L)).willReturn(Optional.empty());
+
+        UpdateStatusRequest request = new UpdateStatusRequest();
+        request.setNuevoEstado(EstadoTarea.EN_PROGRESO);
+
+        assertThatThrownBy(() -> taskService.updateStatus(99L, request, 1L, "ADMIN"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void delete_tareaNoExiste_lanzaNotFound() {
+        given(taskRepository.findById(99L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> taskService.delete(99L, "ADMIN"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void updateStatus_comoUserResponsable_actualizaEstado() {
+        Task task = buildTask(1L, EstadoTarea.PENDIENTE, 5L);
+        Task updated = buildTask(1L, EstadoTarea.EN_PROGRESO, 5L);
+
+        UpdateStatusRequest request = new UpdateStatusRequest();
+        request.setNuevoEstado(EstadoTarea.EN_PROGRESO);
+
+        given(taskRepository.findById(1L)).willReturn(Optional.of(task));
+        given(taskRepository.save(any())).willReturn(updated);
+
+        var result = taskService.updateStatus(1L, request, 5L, "USER");
+
+        assertThat(result.getEstado()).isEqualTo(EstadoTarea.EN_PROGRESO);
+    }
+
+    @Test
+    void updateStatus_comoUserNoResponsable_lanzaForbidden() {
+        Task task = buildTask(1L, EstadoTarea.PENDIENTE, 5L);
+
+        UpdateStatusRequest request = new UpdateStatusRequest();
+        request.setNuevoEstado(EstadoTarea.EN_PROGRESO);
+
+        given(taskRepository.findById(1L)).willReturn(Optional.of(task));
+
+        assertThatThrownBy(() -> taskService.updateStatus(1L, request, 99L, "USER"))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void addComment_tareaNoExiste_lanzaNotFound() {
+        given(taskRepository.findById(99L)).willReturn(Optional.empty());
+
+        CommentRequest request = new CommentRequest();
+        request.setContenido("Comentario");
+
+        assertThatThrownBy(() -> taskService.addComment(99L, request, 1L, "ADMIN"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void addComment_comoUserResponsable_agregaComentario() {
+        Task task = buildTask(1L, EstadoTarea.PENDIENTE, 5L);
+        TaskComment comment = TaskComment.builder()
+                .id(1L).task(task).userId(5L).contenido("Mi comentario").build();
+
+        given(taskRepository.findById(1L)).willReturn(Optional.of(task));
+        given(commentRepository.save(any())).willReturn(comment);
+
+        CommentRequest request = new CommentRequest();
+        request.setContenido("Mi comentario");
+
+        var result = taskService.addComment(1L, request, 5L, "USER");
+
+        assertThat(result.getContenido()).isEqualTo("Mi comentario");
+    }
+
+    @Test
+    void addComment_comoUserNoResponsable_lanzaForbidden() {
+        Task task = buildTask(1L, EstadoTarea.PENDIENTE, 5L);
+        given(taskRepository.findById(1L)).willReturn(Optional.of(task));
+
+        CommentRequest request = new CommentRequest();
+        request.setContenido("Comentario");
+
+        assertThatThrownBy(() -> taskService.addComment(1L, request, 99L, "USER"))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void findAll_conTodosFiltros_retornaListaVacia() {
+        given(taskRepository.findByProjectIdAndEstado(1L, EstadoTarea.EN_PROGRESO))
+                .willReturn(List.of());
+
+        var result = taskService.findAll(1L, EstadoTarea.EN_PROGRESO, null, 1L, "ADMIN");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void findByProject_conListaVacia_retornaListaVacia() {
+        given(taskRepository.findByProjectId(99L)).willReturn(List.of());
+
+        var result = taskService.findByProject(99L, 1L, "ADMIN");
+
+        assertThat(result).isEmpty();
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
