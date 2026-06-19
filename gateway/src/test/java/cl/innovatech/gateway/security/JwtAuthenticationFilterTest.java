@@ -73,6 +73,32 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void shouldRejectProtectedRouteWithNonBearerAuthorizationHeader() {
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/v1/tasks")
+                        .header(HttpHeaders.AUTHORIZATION, "Basic abc123")
+                        .build()
+        );
+
+        filter.filter(exchange, new CapturingGatewayFilterChain()).block();
+
+        assertEquals(401, exchange.getResponse().getStatusCode().value());
+    }
+
+    @Test
+    void shouldRejectProtectedRouteWithBlankBearerToken() {
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/v1/tasks")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer   ")
+                        .build()
+        );
+
+        filter.filter(exchange, new CapturingGatewayFilterChain()).block();
+
+        assertEquals(401, exchange.getResponse().getStatusCode().value());
+    }
+
+    @Test
     void shouldRejectAdminRouteForNonAdminRole() {
         MockServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/api/v1/users")
@@ -100,6 +126,11 @@ class JwtAuthenticationFilterTest {
         assertEquals("7", chain.exchange.getRequest().getHeaders().getFirst("X-User-Id"));
         assertEquals("ADMIN", chain.exchange.getRequest().getHeaders().getFirst("X-User-Role"));
         assertEquals("admin@innovatech.cl", chain.exchange.getRequest().getHeaders().getFirst("X-User-Email"));
+    }
+
+    @Test
+    void shouldExposeFilterOrder() {
+        assertEquals(-100, filter.getOrder());
     }
 
     private String createToken(Long userId, String role, String email) {
