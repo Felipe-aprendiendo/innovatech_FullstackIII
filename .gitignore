@@ -26,3 +26,8 @@ Thumbs.db
 
 # Env
 .env
+
+# Ignorar dependencias del frontend desde la raíz
+frontend/node_modules/
+frontend/dist/
+frontend/.env

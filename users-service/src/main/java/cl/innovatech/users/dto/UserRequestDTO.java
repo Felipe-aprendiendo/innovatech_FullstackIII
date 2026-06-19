@@ -1,7 +1,10 @@
 package cl.innovatech.users.dto;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
+
 import java.util.Set;
 
 @Data
@@ -12,12 +15,14 @@ public class UserRequestDTO {
 
     private String lastName;
 
-    @Email(message = "Email inválido")
+    @Email(message = "Email invalido")
     @NotBlank(message = "El email es obligatorio")
     private String email;
 
-    @NotBlank(message = "La contraseña es obligatoria")
-    @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
+    @Pattern(
+        regexp = "^$|^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[@$!%*?&]).{8,}$",
+        message = "La contrasena debe tener minimo 8 caracteres, una mayuscula, una minuscula, un numero y un simbolo"
+    )
     private String password;
 
     private Set<Long> roleIds;

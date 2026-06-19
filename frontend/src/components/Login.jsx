@@ -98,13 +98,6 @@ export default function Login({ onLoginSuccess }) {
           </button>
         </form>
 
-        <p className="text-center text-gray-600 text-sm mt-6">
-          Credenciales de prueba:
-          <br />
-          <span className="font-mono text-xs">test@example.com</span>
-          <br />
-          <span className="font-mono text-xs">Password123!</span>
-        </p>
       </div>
     </div>
   )

@@ -2,7 +2,7 @@ import { useAuth } from '../context/AuthContext'
 import { useState, useCallback } from 'react'
 
 export function useFetch() {
-  const { getAuthHeader, refreshAccessToken } = useAuth()
+  const { getAuthHeader, refreshAccessToken, logout } = useAuth()
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -26,16 +26,22 @@ export function useFetch() {
         // Si el token expiró (401), intentar refrescar
         if (response.status === 401) {
           try {
-            await refreshAccessToken()
+            const refreshedTokens = await refreshAccessToken()
             const newHeaders = {
               'Content-Type': 'application/json',
-              ...getAuthHeader(),
+              ...(refreshedTokens?.accessToken
+                ? { Authorization: `Bearer ${refreshedTokens.accessToken}` }
+                : {}),
               ...options.headers,
             }
             response = await fetch(url, {
               ...options,
               headers: newHeaders,
             })
+            if (response.status === 401) {
+              await logout()
+              throw new Error('Sesion expirada o sin permisos. Inicia sesion nuevamente.')
+            }
           } catch (refreshError) {
             throw new Error('Sesión expirada, por favor inicia sesión nuevamente')
           }
@@ -55,7 +61,7 @@ export function useFetch() {
         setLoading(false)
       }
     },
-    [getAuthHeader, refreshAccessToken]
+    [getAuthHeader, logout, refreshAccessToken]
   )
 
   return { fetchWithToken, error, loading }

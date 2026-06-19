@@ -2,7 +2,20 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 
 const AuthContext = createContext(null)
 
-const AUTH_API_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '')
+const AUTH_API_URL = `${API_BASE_URL}/api/v1/auth`
+
+function buildUserFromTokens(storedTokens) {
+  if (!storedTokens?.accessToken || !storedTokens?.email) {
+    return null
+  }
+
+  return {
+    id: storedTokens.userId ?? null,
+    email: storedTokens.email,
+    permissions: storedTokens.permissions || [],
+  }
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -15,7 +28,15 @@ export function AuthProvider({ children }) {
     const storedTokens = localStorage.getItem('tokens')
     if (storedTokens) {
       try {
-        setTokens(JSON.parse(storedTokens))
+        const parsedTokens = JSON.parse(storedTokens)
+        const storedUser = buildUserFromTokens(parsedTokens)
+
+        if (storedUser) {
+          setTokens(parsedTokens)
+          setUser(storedUser)
+        } else {
+          localStorage.removeItem('tokens')
+        }
       } catch (e) {
         localStorage.removeItem('tokens')
       }
@@ -26,7 +47,7 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     setError(null)
     try {
-      const response = await fetch(`${AUTH_API_URL}/auth/login`, {
+      const response = await fetch(`${AUTH_API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -39,11 +60,7 @@ export function AuthProvider({ children }) {
 
       const data = await response.json()
       setTokens(data)
-      setUser({
-        id: data.userId,
-        email: data.email,
-        permissions: data.permissions || [],
-      })
+      setUser(buildUserFromTokens(data))
       localStorage.setItem('tokens', JSON.stringify(data))
       return data
     } catch (err) {
@@ -55,9 +72,12 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     if (tokens?.refreshToken) {
       try {
-        await fetch(`${AUTH_API_URL}/auth/logout`, {
+        await fetch(`${AUTH_API_URL}/logout`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(tokens.accessToken ? { Authorization: `Bearer ${tokens.accessToken}` } : {}),
+          },
           body: JSON.stringify({ refreshToken: tokens.refreshToken }),
         })
       } catch (err) {
@@ -76,7 +96,7 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      const response = await fetch(`${AUTH_API_URL}/auth/refresh`, {
+      const response = await fetch(`${AUTH_API_URL}/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken: tokens.refreshToken }),
@@ -88,8 +108,9 @@ export function AuthProvider({ children }) {
 
       const newTokens = await response.json()
       setTokens(newTokens)
+      setUser(buildUserFromTokens(newTokens))
       localStorage.setItem('tokens', JSON.stringify(newTokens))
-      return newTokens.accessToken
+      return newTokens
     } catch (err) {
       // Token expirado, hacer logout
       await logout()
@@ -106,7 +127,7 @@ export function AuthProvider({ children }) {
     tokens,
     loading,
     error,
-    isAuthenticated: !!user && !!tokens,
+    isAuthenticated: !!tokens?.accessToken && !!user,
     login,
     logout,
     refreshAccessToken,

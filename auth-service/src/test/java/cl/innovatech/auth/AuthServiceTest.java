@@ -41,7 +41,7 @@ class JwtServiceTest {
     @DisplayName("Genera access token con claims correctos")
     void genera_access_token_con_claims() {
         String token = jwtService.generateAccessToken(
-            "admin@innovatech.cl", 1L,
+            "admin@innovatech.cl", 1L, "ROLE_ADMIN",
             List.of("USUARIOS_LEER", "PROYECTOS_CREAR"));
 
         assertThat(token).isNotBlank();
@@ -54,7 +54,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("Valida token correctamente firmado")
     void valida_token_correcto() {
-        String token = jwtService.generateAccessToken("user@test.cl", 2L, List.of());
+        String token = jwtService.generateAccessToken("user@test.cl", 2L, "ROLE_USER", List.of());
         assertThat(jwtService.isTokenValid(token)).isTrue();
     }
 
@@ -149,6 +149,7 @@ class AuthServiceTest {
             when(authUserRepository.findByEmail(email)).thenReturn(Optional.of(user));
             when(authUserRepository.save(any())).thenReturn(user);
             when(usersServiceClient.isUserActive(10L)).thenReturn(true);
+            when(usersServiceClient.getPrimaryRole(10L)).thenReturn("ROLE_ADMIN");
             when(usersServiceClient.getUserPermissions(10L))
                 .thenReturn(List.of("USUARIOS_LEER", "PROYECTOS_CREAR"));
             when(refreshTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

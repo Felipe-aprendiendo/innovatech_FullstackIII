@@ -92,7 +92,7 @@ public class JwtService {
             }
         }
 
-        throw new IllegalArgumentException("El token JWT no contiene un rol valido.");
+        return "USER";
     }
 
     private String extractEmail(Claims claims) {

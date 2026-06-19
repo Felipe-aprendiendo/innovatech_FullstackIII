@@ -33,6 +33,7 @@ public class SecurityConfig {
     "/auth/register",
     "/auth/refresh",
     "/auth/validate",
+    "/auth/internal/**",
     "/auth/users/*/exists",
     "/auth/test-hash",
     "/actuator/**",
