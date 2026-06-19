@@ -29,13 +29,13 @@ public class SecurityConfig {
 
     /** Endpoints públicos — no requieren JWT */
     private static final String[] PUBLIC_PATHS = {
-    "/auth/login",
-    "/auth/register",
-    "/auth/refresh",
-    "/auth/validate",
-    "/auth/internal/**",
-    "/auth/users/*/exists",
-    "/auth/test-hash",
+    "/api/v1/auth/login",
+    "/api/v1/auth/register",
+    "/api/v1/auth/refresh",
+    "/api/v1/auth/validate",
+    "/api/v1/auth/internal/**",
+    "/api/v1/auth/users/*/exists",
+    "/api/v1/auth/test-hash",
     "/actuator/**",
     "/api-docs/**",
     "/swagger-ui/**",
