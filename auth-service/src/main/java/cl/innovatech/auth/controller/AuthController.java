@@ -85,6 +85,21 @@ public class AuthController {
     }
 
     // ─── GET /auth/validate ───────────────────────────────────────────────
+    @PutMapping("/internal/users/{usersServiceId}")
+    @Operation(summary = "Sincronizar credenciales desde users-service")
+    public ResponseEntity<AuthUserResponse> syncCredentials(
+            @PathVariable("usersServiceId") Long usersServiceId,
+            @Valid @RequestBody SyncCredentialsRequest req) {
+        return ResponseEntity.ok(authService.syncCredentials(usersServiceId, req));
+    }
+
+    @DeleteMapping("/internal/users/{usersServiceId}")
+    @Operation(summary = "Eliminar credenciales vinculadas a un usuario de users-service")
+    public ResponseEntity<Void> deleteCredentials(@PathVariable("usersServiceId") Long usersServiceId) {
+        authService.deleteCredentialsByUsersServiceId(usersServiceId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/validate")
     @Operation(summary = "Validar access token (usado por el Gateway y otros servicios)")
     public ResponseEntity<ValidateTokenResponse> validateToken(

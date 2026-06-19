@@ -20,8 +20,16 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
         format_sql: true
 
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
 jwt:
   secret: ${JWT_SECRET:clave-secreta-super-segura-para-desarrollo}
+
+auth-service:
+  url: ${AUTH_SERVICE_URL:http://localhost:8001}
 
 springdoc:
   api-docs:

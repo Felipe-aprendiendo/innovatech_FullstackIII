@@ -116,9 +116,13 @@ public class AuthService {
         List<String> permissions = user.getUsersServiceId() != null
             ? usersServiceClient.getUserPermissions(user.getUsersServiceId())
             : List.of();
+        String primaryRole = user.getUsersServiceId() != null
+            ? usersServiceClient.getPrimaryRole(user.getUsersServiceId())
+            : "ROLE_USER";
 
         // Generar tokens
-        String accessToken  = jwtService.generateAccessToken(email, user.getUsersServiceId(), permissions);
+        String accessToken  = jwtService.generateAccessToken(
+            email, user.getUsersServiceId(), primaryRole, permissions);
         String refreshToken = jwtService.generateRefreshToken();
 
         // Persistir refresh token
@@ -173,6 +177,9 @@ public class AuthService {
         List<String> permissions = user.getUsersServiceId() != null
             ? usersServiceClient.getUserPermissions(user.getUsersServiceId())
             : List.of();
+        String primaryRole = user.getUsersServiceId() != null
+            ? usersServiceClient.getPrimaryRole(user.getUsersServiceId())
+            : "ROLE_USER";
 
         // Rotar: revocar el token viejo, emitir uno nuevo
         stored.revoke();
@@ -180,7 +187,7 @@ public class AuthService {
             Duration.ofMillis(jwtService.getRefreshTokenExpirationMs()));
 
         String newAccessToken  = jwtService.generateAccessToken(
-            user.getEmail(), user.getUsersServiceId(), permissions);
+            user.getEmail(), user.getUsersServiceId(), primaryRole, permissions);
         String newRefreshToken = jwtService.generateRefreshToken();
 
         persistRefreshToken(user, newRefreshToken,
@@ -251,6 +258,58 @@ public class AuthService {
     }
 
     // ─── Verificar existencia (para users-service) ────────────────────────
+
+    @Transactional
+    public AuthUserResponse syncCredentials(Long usersServiceId, SyncCredentialsRequest req) {
+        String normalizedEmail = req.getEmail().toLowerCase().trim();
+
+        AuthUser existingByEmail = authUserRepository.findByEmail(normalizedEmail).orElse(null);
+        AuthUser user = authUserRepository.findByUsersServiceId(usersServiceId).orElse(null);
+
+        if (existingByEmail != null && (user == null || !existingByEmail.getId().equals(user.getId()))) {
+            throw new EmailDuplicadoException(normalizedEmail);
+        }
+
+        boolean shouldRotateTokens = false;
+
+        if (user == null) {
+            if (req.getPassword() == null || req.getPassword().isBlank()) {
+                throw new IllegalArgumentException("La contraseÃ±a es obligatoria para crear credenciales");
+            }
+
+            user = AuthUser.builder()
+                .email(normalizedEmail)
+                .passwordHash(passwordEncoder.encode(req.getPassword()))
+                .usersServiceId(usersServiceId)
+                .activo(Boolean.TRUE.equals(req.getActive()))
+                .build();
+        } else {
+            user.setEmail(normalizedEmail);
+            user.setActivo(Boolean.TRUE.equals(req.getActive()));
+
+            if (req.getPassword() != null && !req.getPassword().isBlank()) {
+                user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
+                user.setPasswordChangedAt(LocalDateTime.now());
+                user.setMustChangePassword(false);
+                shouldRotateTokens = true;
+            }
+        }
+
+        AuthUser saved = authUserRepository.save(user);
+        if (shouldRotateTokens) {
+            refreshTokenRepository.revokeAllByUser(saved);
+        }
+
+        return toResponse(saved);
+    }
+
+    @Transactional
+    public void deleteCredentialsByUsersServiceId(Long usersServiceId) {
+        authUserRepository.findByUsersServiceId(usersServiceId).ifPresent(user -> {
+            refreshTokenRepository.revokeAllByUser(user);
+            authUserRepository.delete(user);
+        });
+    }
 
     public boolean existsById(String authUserId) {
         try {

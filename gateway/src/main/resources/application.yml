@@ -39,4 +39,4 @@ gateway:
     exposed-headers:
       - Authorization
   jwt:
-    secret: ${JWT_SECRET:cambiar_por_un_secreto_de_al_menos_32_caracteres_muy_seguro}
+    secret: ${JWT_SECRET:innovatech-secret-key-2024-must-be-at-least-256-bits-long}

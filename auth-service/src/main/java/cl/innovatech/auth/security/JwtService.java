@@ -50,13 +50,20 @@ public class JwtService {
     /**
      * Genera un access token JWT con los datos del usuario y sus permisos.
      */
-    public String generateAccessToken(String email, Long usersServiceId, List<String> permissions) {
+    public String generateAccessToken(
+            String email,
+            Long usersServiceId,
+            String primaryRole,
+            List<String> permissions) {
         Date now    = new Date();
         Date expiry = new Date(now.getTime() + accessTokenExpirationMs);
+        String resolvedRole = primaryRole != null && !primaryRole.isBlank() ? primaryRole : "ROLE_USER";
 
         return Jwts.builder()
             .subject(email)
             .claim("userId",      usersServiceId)
+            .claim("role",        resolvedRole)
+            .claim("roles",       List.of(resolvedRole))
             .claim("permissions", permissions)
             .claim("type",        "access")
             .issuedAt(now)
