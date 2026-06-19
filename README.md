@@ -94,6 +94,21 @@ Disponible en cada servicio una vez levantado:
 - Tasks: http://localhost:8004/swagger-ui.html
 - Reports: http://localhost:8005/swagger-ui.html
 
+Archivos y guia de documentacion API:
+- [docs/api/README.md](/c:/Users/USUARIO/Desktop/Nueva%20carpeta/innovatech_FullstackIII/docs/api/README.md)
+- [docs/api/examples.md](/c:/Users/USUARIO/Desktop/Nueva%20carpeta/innovatech_FullstackIII/docs/api/examples.md)
+
+---
+
+## Gateway
+
+- Puerto del gateway: `http://localhost:8000`
+- Rutas publicas: `/api/v1/auth/**`, `/actuator/**`, `/swagger-ui/**`, `/v3/api-docs/**`
+- Rutas con JWT obligatorio: `/api/v1/projects/**`, `/api/v1/tasks/**`, `/api/v1/reports/**`
+- Rutas solo ADMIN: `/api/v1/users/**`, `/api/v1/roles/**`, `/api/v1/permissions/**`
+- Headers internos que agrega el gateway: `X-User-Id`, `X-User-Role`, `X-User-Email`
+- Si el frontend quiere usar el gateway, debe apuntar sus llamadas a `http://localhost:8000/...`
+
 ---
 
 ## Comandos útiles

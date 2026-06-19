@@ -1,25 +1,32 @@
 package cl.innovatech.users.service;
 
-import cl.innovatech.users.dto.*;
-import cl.innovatech.users.entity.*;
-import cl.innovatech.users.exception.ResourceNotFoundException;
+import cl.innovatech.users.client.AuthServiceClient;
+import cl.innovatech.users.dto.PermissionResponseDTO;
+import cl.innovatech.users.dto.RoleResponseDTO;
+import cl.innovatech.users.dto.UserRequestDTO;
+import cl.innovatech.users.dto.UserResponseDTO;
+import cl.innovatech.users.entity.Role;
+import cl.innovatech.users.entity.User;
 import cl.innovatech.users.exception.EmailAlreadyExistsException;
-import cl.innovatech.users.repository.*;
+import cl.innovatech.users.exception.ResourceNotFoundException;
+import cl.innovatech.users.repository.RoleRepository;
+import cl.innovatech.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
+    private final AuthServiceClient authServiceClient;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public List<UserResponseDTO> findAll() {
@@ -39,20 +46,27 @@ public class UserService {
     @Transactional
     public UserResponseDTO create(UserRequestDTO dto) {
         if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new EmailAlreadyExistsException("El email ya está registrado: " + dto.getEmail());
+            throw new EmailAlreadyExistsException("El email ya esta registrado: " + dto.getEmail());
         }
 
+        validatePasswordForCreate(dto);
         Set<Role> roles = resolveRoles(dto.getRoleIds());
 
         User user = User.builder()
                 .name(dto.getName())
                 .lastName(dto.getLastName())
                 .email(dto.getEmail())
-                .password(passwordEncoder.encode(dto.getPassword()))
                 .roles(roles)
                 .build();
+        user.markCredentialsManagedByAuth();
 
-        return toResponse(userRepository.save(user));
+        User savedUser = userRepository.saveAndFlush(user);
+        authServiceClient.syncCredentials(
+                savedUser.getId(),
+                savedUser.getEmail(),
+                dto.getPassword(),
+                Boolean.TRUE.equals(savedUser.getEnabled()));
+        return toResponse(savedUser);
     }
 
     @Transactional
@@ -61,30 +75,33 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
 
         if (!user.getEmail().equals(dto.getEmail()) && userRepository.existsByEmail(dto.getEmail())) {
-            throw new EmailAlreadyExistsException("El email ya está en uso: " + dto.getEmail());
+            throw new EmailAlreadyExistsException("El email ya esta en uso: " + dto.getEmail());
         }
 
         user.setName(dto.getName());
         user.setLastName(dto.getLastName());
         user.setEmail(dto.getEmail());
-
-        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
-            user.setPassword(passwordEncoder.encode(dto.getPassword()));
-        }
+        user.markCredentialsManagedByAuth();
 
         if (dto.getRoleIds() != null) {
             user.setRoles(resolveRoles(dto.getRoleIds()));
         }
 
-        return toResponse(userRepository.save(user));
+        User savedUser = userRepository.saveAndFlush(user);
+        authServiceClient.syncCredentials(
+                savedUser.getId(),
+                savedUser.getEmail(),
+                dto.getPassword(),
+                Boolean.TRUE.equals(savedUser.getEnabled()));
+        return toResponse(savedUser);
     }
 
     @Transactional
     public void delete(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Usuario no encontrado con id: " + id);
-        }
-        userRepository.deleteById(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        authServiceClient.deleteCredentials(id);
+        userRepository.delete(user);
     }
 
     @Transactional
@@ -92,17 +109,31 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
         user.setEnabled(!user.getEnabled());
-        return toResponse(userRepository.save(user));
+        user.markCredentialsManagedByAuth();
+
+        User savedUser = userRepository.saveAndFlush(user);
+        authServiceClient.syncCredentials(
+                savedUser.getId(),
+                savedUser.getEmail(),
+                null,
+                Boolean.TRUE.equals(savedUser.getEnabled()));
+        return toResponse(savedUser);
     }
 
-    // --- Mappers ---
-
     private Set<Role> resolveRoles(Set<Long> roleIds) {
-        if (roleIds == null || roleIds.isEmpty()) return new HashSet<>();
+        if (roleIds == null || roleIds.isEmpty()) {
+            return new HashSet<>();
+        }
         return roleIds.stream()
                 .map(rid -> roleRepository.findById(rid)
                         .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado con id: " + rid)))
                 .collect(Collectors.toSet());
+    }
+
+    private void validatePasswordForCreate(UserRequestDTO dto) {
+        if (dto.getPassword() == null || dto.getPassword().isBlank()) {
+            throw new IllegalArgumentException("La contrasena es obligatoria al crear un usuario");
+        }
     }
 
     public UserResponseDTO toResponse(User u) {
