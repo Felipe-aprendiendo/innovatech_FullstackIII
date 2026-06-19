@@ -94,6 +94,10 @@ Disponible en cada servicio una vez levantado:
 - Tasks: http://localhost:8004/swagger-ui.html
 - Reports: http://localhost:8005/swagger-ui.html
 
+Archivos y guia de documentacion API:
+- [docs/api/README.md](/c:/Users/USUARIO/Desktop/Nueva%20carpeta/innovatech_FullstackIII/docs/api/README.md)
+- [docs/api/examples.md](/c:/Users/USUARIO/Desktop/Nueva%20carpeta/innovatech_FullstackIII/docs/api/examples.md)
+
 ---
 
 ## Gateway
