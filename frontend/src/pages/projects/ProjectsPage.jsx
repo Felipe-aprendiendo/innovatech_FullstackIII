@@ -196,7 +196,7 @@ export default function ProjectsPage() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
             {orderedProjects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
+              <ProjectCard key={project.id} project={project} onRefresh={loadProjects} />
             ))}
           </div>
         )}
