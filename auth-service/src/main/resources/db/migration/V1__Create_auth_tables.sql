@@ -79,7 +79,7 @@ CREATE INDEX idx_audit_login_created       ON audit_login(created_at);
 INSERT INTO auth_users (email, password_hash, activo, must_change_password)
 VALUES (
     'admin@innovatech.cl',
-    '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.',
+    '$2a$12$KI7115mOnGu1AP3llovhAOri7O3ikwAfvJyWeU46jjy4CoXpShIDO',
     TRUE,
     FALSE
 );
