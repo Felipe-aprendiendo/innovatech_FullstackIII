@@ -30,6 +30,7 @@ export default function ProjectCard({ project, onRefresh }) {
 
   const canModify = user?.role === 'ADMIN' ||
     (user?.role === 'PROJECT_LEAD' && project.responsableId === user.id)
+  const canDelete = user?.role === 'ADMIN'
 
   const isClosed = project.estado === 'CERRADO' || project.estado === 'COMPLETADO'
   const availableNext = nextStatuses[project.estado] ?? []
@@ -50,6 +51,17 @@ export default function ProjectCard({ project, onRefresh }) {
     try {
       setActionError('')
       await projectService.close(project.id)
+      onRefresh()
+    } catch (err) {
+      setActionError(err.message)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm(`¿Eliminar el proyecto "${project.nombre}"? Esta acción no se puede deshacer.`)) return
+    try {
+      setActionError('')
+      await projectService.delete(project.id)
       onRefresh()
     } catch (err) {
       setActionError(err.message)
@@ -103,6 +115,15 @@ export default function ProjectCard({ project, onRefresh }) {
               </div>
             )}
           </div>
+
+          {canDelete && (
+            <div className="mt-4 flex justify-end">
+              <button onClick={handleDelete}
+                className="rounded-full bg-red-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-500">
+                Eliminar proyecto
+              </button>
+            </div>
+          )}
 
           {actionError && (
             <p className="mt-3 text-xs text-red-400">{actionError}</p>
