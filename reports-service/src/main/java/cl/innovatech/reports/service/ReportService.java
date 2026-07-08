@@ -13,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -30,7 +32,7 @@ public class ReportService {
             throw new ForbiddenException("Acceso denegado: se requiere ADMIN o PROJECT_LEAD");
         }
 
-        List<KpiSnapshot> snapshots = kpiSnapshotRepository.findAllByOrderByCalculadoAtDesc();
+        List<KpiSnapshot> snapshots = latestPerProject();
 
         List<ProjectReportResponse> proyectos = snapshots.stream()
                 .map(s -> {
@@ -59,7 +61,7 @@ public class ReportService {
             throw new ForbiddenException("Acceso denegado: se requiere ADMIN o PROJECT_LEAD");
         }
 
-        List<KpiSnapshot> snapshots = kpiSnapshotRepository.findAllByOrderByCalculadoAtDesc();
+        List<KpiSnapshot> snapshots = latestPerProject();
         return snapshots.stream()
                 .map(s -> {
                     String nombre = projectsClient.getProjectName(s.getProjectId());
@@ -99,5 +101,18 @@ public class ReportService {
 
     public List<TaskReportResponse> getMyReport(Long userId, String userRole) {
         return tasksClient.getTasksByUser(userId);
+    }
+
+    private List<KpiSnapshot> latestPerProject() {
+        return kpiSnapshotRepository.findAllByOrderByCalculadoAtDesc()
+                .stream()
+                .collect(Collectors.toMap(
+                        KpiSnapshot::getProjectId,
+                        s -> s,
+                        (a, b) -> a
+                ))
+                .values()
+                .stream()
+                .toList();
     }
 }

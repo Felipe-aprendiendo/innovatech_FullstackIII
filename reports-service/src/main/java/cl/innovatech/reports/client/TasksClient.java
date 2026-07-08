@@ -8,6 +8,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+
 import java.util.List;
 import java.util.Map;
 
@@ -24,9 +28,11 @@ public class TasksClient {
     @Retry(name = "tasks-client", fallbackMethod = "getTasksByProjectFallback")
     public List<TaskReportResponse> getTasksByProject(Long projectId) {
         try {
-            var response = restTemplate.getForObject(
+            var response = restTemplate.exchange(
                     tasksUrl + "/api/v1/tasks/project/" + projectId,
-                    Map.class);
+                    HttpMethod.GET,
+                    new HttpEntity<>(serviceHeaders()),
+                    Map.class).getBody();
             if (response != null && response.get("data") instanceof List<?> data) {
                 return data.stream()
                         .filter(item -> item instanceof Map<?, ?>)
@@ -59,9 +65,11 @@ public class TasksClient {
     @Retry(name = "tasks-client", fallbackMethod = "getTasksByUserFallback")
     public List<TaskReportResponse> getTasksByUser(Long userId) {
         try {
-            var response = restTemplate.getForObject(
+            var response = restTemplate.exchange(
                     tasksUrl + "/api/v1/tasks?responsableId=" + userId,
-                    Map.class);
+                    HttpMethod.GET,
+                    new HttpEntity<>(serviceHeaders()),
+                    Map.class).getBody();
             if (response != null && response.get("data") instanceof List<?> data) {
                 return data.stream()
                         .filter(item -> item instanceof Map<?, ?>)
@@ -89,5 +97,12 @@ public class TasksClient {
     public List<TaskReportResponse> getTasksByUserFallback(Long userId, Exception ex) {
         log.warn("Fallback getTasksByUser para userId={}: {}", userId, ex.getMessage());
         return List.of();
+    }
+
+    private HttpHeaders serviceHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-User-Id", "1");
+        headers.set("X-User-Role", "ADMIN");
+        return headers;
     }
 }

@@ -35,15 +35,26 @@ public class KpiCalculatorService {
                 ? BigDecimal.valueOf((double) completadas / total * 100).setScale(2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
 
-        KpiSnapshot snapshot = KpiSnapshot.builder()
-                .projectId(projectId)
-                .totalTareas(total)
-                .tareasCompletadas(completadas)
-                .tareasEnProgreso(enProgreso)
-                .tareasPendientes(pendientes)
-                .porcentajeAvance(porcentaje)
-                .calculadoAt(LocalDateTime.now())
-                .build();
+        KpiSnapshot snapshot = kpiSnapshotRepository
+                .findTopByProjectIdOrderByCalculadoAtDesc(projectId)
+                .map(existing -> {
+                    existing.setTotalTareas(total);
+                    existing.setTareasCompletadas(completadas);
+                    existing.setTareasEnProgreso(enProgreso);
+                    existing.setTareasPendientes(pendientes);
+                    existing.setPorcentajeAvance(porcentaje);
+                    existing.setCalculadoAt(LocalDateTime.now());
+                    return existing;
+                })
+                .orElseGet(() -> KpiSnapshot.builder()
+                        .projectId(projectId)
+                        .totalTareas(total)
+                        .tareasCompletadas(completadas)
+                        .tareasEnProgreso(enProgreso)
+                        .tareasPendientes(pendientes)
+                        .porcentajeAvance(porcentaje)
+                        .calculadoAt(LocalDateTime.now())
+                        .build());
 
         KpiSnapshot saved = kpiSnapshotRepository.save(snapshot);
         log.info("KPI recalculado para proyecto {}: {}% avance ({}/{} completadas)",

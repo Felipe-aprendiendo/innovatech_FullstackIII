@@ -22,7 +22,7 @@ public class UsersClient {
     @Retry(name = "users-client", fallbackMethod = "userExistsFallback")
     public boolean userExists(Long userId) {
         try {
-            restTemplate.getForObject(usersUrl + "/api/v1/users/" + userId + "/basic", Object.class);
+            restTemplate.getForObject(usersUrl + "/api/v1/users/" + userId, Object.class);
             return true;
         } catch (Exception ex) {
             log.warn("Error al verificar usuario {}: {}", userId, ex.getMessage());
