@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import Navbar from '../../components/Navbar'
 import userService from '../../services/userService'
 import UserFormModal from './UserFormModal'
 
@@ -58,7 +57,6 @@ export default function UsersPage() {
 
   return (
     <>
-      <Navbar />
       <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         <section className="mx-auto w-full max-w-6xl px-6 py-10">
 

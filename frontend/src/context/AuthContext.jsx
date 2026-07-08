@@ -16,7 +16,7 @@ function buildUserFromTokens(storedTokens) {
   return {
     id: storedTokens.userId ?? claims.userId ?? null,
     email: storedTokens.email ?? claims.sub ?? null,
-    role: storedTokens.role ?? claims.rol ?? claims.role ?? null,
+    role: (storedTokens.role ?? claims.rol ?? claims.role ?? '').replace(/^ROLE_/, '') || null,
     permissions: storedTokens.permissions || [],
   }
 }
