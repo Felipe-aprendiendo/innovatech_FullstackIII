@@ -20,10 +20,7 @@ const projectService = {
     }),
 
   changeStatus: (id, estado) =>
-    apiFetch(`/api/v1/projects/${id}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ estado }),
-    }),
+    apiFetch(`/api/v1/projects/${id}/status?estado=${estado}`, { method: 'PATCH' }),
 
   close: (id) =>
     apiFetch(`/api/v1/projects/${id}/close`, {
