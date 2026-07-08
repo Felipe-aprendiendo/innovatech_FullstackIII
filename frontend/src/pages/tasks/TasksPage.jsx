@@ -37,6 +37,8 @@ export default function TasksPage() {
 
   const canCreate = user?.role === 'ADMIN' || user?.role === 'PROJECT_LEAD'
   const canDelete = user?.role === 'ADMIN'
+  const canChangeStatus = (task) =>
+    user?.role === 'ADMIN' || user?.role === 'PROJECT_LEAD' || task.responsableId === user?.id
 
   const load = useCallback(async () => {
     try {
@@ -159,7 +161,7 @@ export default function TasksPage() {
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
-                      {(nextEstados[task.estado] ?? []).map(s => (
+                      {canChangeStatus(task) && (nextEstados[task.estado] ?? []).map(s => (
                         <button key={s} onClick={() => handleChangeStatus(task, s)}
                           className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
                           → {s}
