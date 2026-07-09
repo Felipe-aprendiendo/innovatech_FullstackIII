@@ -21,7 +21,9 @@ export default function Navbar() {
             <div className="flex items-center gap-8">
               <h1 className="text-2xl font-bold">InnovaTech</h1>
               <div className="hidden md:flex gap-6">
-                <Link to="/projects" className="hover:opacity-80 transition">Proyectos</Link>
+                {user?.role !== 'USER' && (
+                  <Link to="/projects" className="hover:opacity-80 transition">Proyectos</Link>
+                )}
                 <Link to="/tasks" className="hover:opacity-80 transition">Tareas</Link>
                 <Link to="/reports" className="hover:opacity-80 transition">Reportes</Link>
                 {user?.role === 'ADMIN' && (

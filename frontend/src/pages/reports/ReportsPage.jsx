@@ -18,7 +18,7 @@ function StatCard({ label, value, color = 'slate' }) {
   )
 }
 
-function ResumenTab() {
+function ResumenTab({ projectFilter }) {
   const [dashboard, setDashboard] = useState(null)
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
@@ -34,15 +34,20 @@ function ResumenTab() {
   if (error)   return <p className="text-red-600 text-center py-10">{error}</p>
   if (!dashboard) return null
 
-  const proyectos = dashboard.proyectos ?? []
+  const proyectos = (dashboard.proyectos ?? []).filter(p =>
+    projectFilter === null || projectFilter?.has(p.projectId)
+  )
+  const totalTareas       = proyectos.reduce((s, p) => s + (p.totalTareas ?? 0), 0)
+  const tareasEnProgreso  = proyectos.reduce((s, p) => s + (p.tareasEnProgreso ?? 0), 0)
+  const tareasCompletadas = proyectos.reduce((s, p) => s + (p.tareasCompletadas ?? 0), 0)
 
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard label="Proyectos"      value={dashboard.totalProyectos}    color="slate"  />
-        <StatCard label="Tareas totales" value={dashboard.totalTareas}       color="blue"   />
-        <StatCard label="En progreso"    value={dashboard.tareasEnProgreso}  color="yellow" />
-        <StatCard label="Completadas"    value={dashboard.tareasCompletadas} color="green"  />
+        <StatCard label="Proyectos"      value={proyectos.length}    color="slate"  />
+        <StatCard label="Tareas totales" value={totalTareas}         color="blue"   />
+        <StatCard label="En progreso"    value={tareasEnProgreso}    color="yellow" />
+        <StatCard label="Completadas"    value={tareasCompletadas}   color="green"  />
       </div>
 
       <div className="bg-white rounded-xl shadow overflow-x-auto">
@@ -88,7 +93,7 @@ function ResumenTab() {
   )
 }
 
-function KpiTab() {
+function KpiTab({ projectFilter }) {
   const [projects, setProjects]       = useState([])
   const [selectedId, setSelectedId]   = useState('')
   const [kpi, setKpi]                 = useState(null)
@@ -118,12 +123,16 @@ function KpiTab() {
     }
   }
 
+  const visibleProjects = projectFilter === null
+    ? projects
+    : projects.filter(p => projectFilter?.has(p.id))
+
   return (
     <div className="space-y-6">
       <select value={selectedId} onChange={handleSelect}
         className="w-full max-w-sm rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-blue-400 shadow-sm">
         <option value="">— Selecciona un proyecto —</option>
-        {projects.map(p => (
+        {visibleProjects.map(p => (
           <option key={p.id} value={p.id}>{p.nombre}</option>
         ))}
       </select>
@@ -155,7 +164,7 @@ function KpiTab() {
   )
 }
 
-function TareasTab() {
+function TareasTab({ projectFilter }) {
   const [tasks, setTasks]     = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
@@ -183,6 +192,10 @@ function TareasTab() {
   if (loading) return <p className="text-slate-500 text-center py-10">Cargando tareas…</p>
   if (error)   return <p className="text-red-600 text-center py-10">{error}</p>
 
+  const visibleTasks = projectFilter === null
+    ? tasks
+    : tasks.filter(t => projectFilter?.has(t.projectId))
+
   return (
     <div className="bg-white rounded-xl shadow overflow-x-auto">
       <table className="min-w-full text-sm">
@@ -196,10 +209,10 @@ function TareasTab() {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {tasks.length === 0 && (
+          {visibleTasks.length === 0 && (
             <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400">Sin tareas disponibles</td></tr>
           )}
-          {tasks.map(t => (
+          {visibleTasks.map(t => (
             <tr key={t.taskId} className="hover:bg-slate-50 transition-colors">
               <td className="px-4 py-3 text-slate-400">{t.taskId}</td>
               <td className="px-4 py-3 font-medium text-slate-800">{t.titulo}</td>
@@ -223,7 +236,27 @@ function TareasTab() {
 }
 
 function AdminDashboard() {
+  const { user } = useAuth()
   const [tab, setTab] = useState('resumen')
+  // null = ADMIN (no filter); undefined = loading for PROJECT_LEAD; Set = lead's project IDs
+  const [myProjectIds, setMyProjectIds] = useState(
+    user?.role === 'PROJECT_LEAD' ? undefined : null
+  )
+
+  useEffect(() => {
+    if (user?.role === 'PROJECT_LEAD') {
+      projectService.getAll()
+        .then(data => {
+          const arr = Array.isArray(data) ? data : []
+          const ids = new Set(
+            arr.filter(p => Number(p.responsableId) === Number(user.id)).map(p => p.id)
+          )
+          setMyProjectIds(ids)
+        })
+        .catch(() => setMyProjectIds(new Set()))
+    }
+  }, [user])
+
   const tabs = [
     { key: 'resumen',  label: 'Resumen' },
     { key: 'kpi',      label: 'KPI por Proyecto' },
@@ -241,9 +274,15 @@ function AdminDashboard() {
         ))}
       </div>
 
-      {tab === 'resumen' && <ResumenTab />}
-      {tab === 'kpi'     && <KpiTab />}
-      {tab === 'tareas'  && <TareasTab />}
+      {myProjectIds === undefined ? (
+        <p className="text-slate-500 text-center py-10">Cargando proyectos...</p>
+      ) : (
+        <>
+          {tab === 'resumen' && <ResumenTab projectFilter={myProjectIds} />}
+          {tab === 'kpi'     && <KpiTab projectFilter={myProjectIds} />}
+          {tab === 'tareas'  && <TareasTab projectFilter={myProjectIds} />}
+        </>
+      )}
     </div>
   )
 }

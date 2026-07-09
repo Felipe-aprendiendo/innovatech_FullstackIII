@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import ProjectCard from '../../components/ProjectCard'
 import ProjectFormModal from '../../components/ProjectFormModal'
 import { useFetch } from '../../hooks/useFetch'
@@ -24,6 +26,7 @@ const initialProjectForm = {
 }
 
 export default function ProjectsPage() {
+  const { user } = useAuth()
   const [projects, setProjects] = useState([])
   const [userMap, setUserMap] = useState({})
   const [loading, setLoading] = useState(true)
@@ -110,7 +113,11 @@ export default function ProjectsPage() {
     }
   }
 
-  const orderedProjects = [...projects].sort((projectA, projectB) => {
+  const handleDeleteProject = (id) => {
+    setProjects(prev => prev.filter(p => p.id !== id))
+  }
+
+  const allSorted = [...projects].sort((projectA, projectB) => {
     if (criterioOrden === 'id') {
       return (projectB.id ?? 0) - (projectA.id ?? 0)
     }
@@ -119,6 +126,12 @@ export default function ProjectsPage() {
       (PRIORITY_ORDER[projectA.prioridad] ?? 0)
     )
   })
+
+  const orderedProjects = user?.role === 'PROJECT_LEAD'
+    ? allSorted.filter(p => Number(p.responsableId) === Number(user.id))
+    : allSorted
+
+  if (user?.role === 'USER') return <Navigate to="/tasks" replace />
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,204,21,0.20),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#e2e8f0_52%,_#cbd5e1_100%)] text-slate-900">
@@ -161,18 +174,18 @@ export default function ProjectsPage() {
 
             <div className="grid grid-cols-3 gap-3 text-center">
               <div className="rounded-2xl border border-slate-200 bg-white px-3 py-4">
-                <p className="text-2xl font-black text-slate-950">{projects.length}</p>
+                <p className="text-2xl font-black text-slate-950">{orderedProjects.length}</p>
                 <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">Total</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white px-3 py-4">
                 <p className="text-2xl font-black text-amber-600">
-                  {projects.filter((project) => project.prioridad === 'ALTA').length}
+                  {orderedProjects.filter((project) => project.prioridad === 'ALTA').length}
                 </p>
                 <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">Alta</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white px-3 py-4">
                 <p className="text-2xl font-black text-emerald-600">
-                  {projects.filter(
+                  {orderedProjects.filter(
                     (project) => project.estado === 'COMPLETADO' || project.estado === 'CERRADO',
                   ).length}
                 </p>
@@ -208,7 +221,7 @@ export default function ProjectsPage() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
             {orderedProjects.map((project) => (
-              <ProjectCard key={project.id} project={project} onRefresh={loadProjects} responsableNombre={userMap[project.responsableId] ?? ''} />
+              <ProjectCard key={project.id} project={project} onRefresh={loadProjects} onDelete={handleDeleteProject} responsableNombre={userMap[project.responsableId] ?? ''} />
             ))}
           </div>
         )}
