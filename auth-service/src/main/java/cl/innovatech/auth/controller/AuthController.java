@@ -24,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -225,7 +225,7 @@ public class AuthController {
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponse(responseCode = "204", description = "Contrasena actualizada")
     public ResponseEntity<Void> changePassword(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal String email,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Contrasena actual y nueva contrasena segura",
                     required = true,
@@ -244,7 +244,7 @@ public class AuthController {
                     )
             )
             @Valid @RequestBody ChangePasswordRequest req) {
-        authService.cambiarPassword(userDetails.getUsername(), req);
+        authService.cambiarPassword(email, req);
         return ResponseEntity.noContent().build();
     }
 
