@@ -82,7 +82,7 @@ export default function UsersPage() {
             </div>
           ) : (
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-              <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+              <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 w-8">#</th>

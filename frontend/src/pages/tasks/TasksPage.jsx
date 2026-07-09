@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import taskService from '../../services/taskService'
+import projectService from '../../services/projectService'
 import TaskFormModal from '../../components/TaskFormModal'
 
 const estadoStyles = {
@@ -26,9 +27,11 @@ const nextEstados = {
 export default function TasksPage() {
   const { user } = useAuth()
   const [tasks, setTasks] = useState([])
+  const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [filtroProyecto, setFiltroProyecto] = useState('')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editTask, setEditTask] = useState(null)
   const [commentTask, setCommentTask] = useState(null)
@@ -41,11 +44,25 @@ export default function TasksPage() {
   const canChangeStatus = (task) =>
     user?.role === 'ADMIN' || user?.role === 'PROJECT_LEAD' || task.responsableId === user?.id
 
+  const getProjectName = (projectId) => {
+    const p = projects.find(p => p.id === projectId || p.id === Number(projectId))
+    return p?.nombre ?? `Proyecto #${projectId}`
+  }
+
+  useEffect(() => {
+    projectService.getAll()
+      .then(data => setProjects(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [])
+
   const load = useCallback(async () => {
     try {
       setLoading(true)
       setError('')
-      const res = await taskService.getAll(filtroEstado ? { estado: filtroEstado } : {})
+      const params = {}
+      if (filtroProyecto) params.projectId = filtroProyecto
+      if (filtroEstado) params.estado = filtroEstado
+      const res = await taskService.getAll(params)
       const list = Array.isArray(res) ? res : (res?.data ?? [])
       setTasks(list)
     } catch (err) {
@@ -53,7 +70,7 @@ export default function TasksPage() {
     } finally {
       setLoading(false)
     }
-  }, [filtroEstado])
+  }, [filtroEstado, filtroProyecto])
 
   useEffect(() => { load() }, [load])
 
@@ -107,8 +124,6 @@ export default function TasksPage() {
     }
   }
 
-  const filtered = filtroEstado ? tasks.filter(t => t.estado === filtroEstado) : tasks
-
   return (
     <>
       <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
@@ -120,6 +135,13 @@ export default function TasksPage() {
               <p className="mt-1 text-sm text-slate-500">{tasks.length} tarea(s) en total</p>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
+              <select value={filtroProyecto} onChange={e => setFiltroProyecto(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-blue-400">
+                <option value="">Todos los proyectos</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                ))}
+              </select>
               <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
                 className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-blue-400">
                 <option value="">Todos los estados</option>
@@ -146,13 +168,13 @@ export default function TasksPage() {
               <p className="text-red-700">{error}</p>
               <button onClick={load} className="mt-4 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white">Reintentar</button>
             </div>
-          ) : filtered.length === 0 ? (
+          ) : tasks.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
               <p className="text-slate-500">No hay tareas para mostrar.</p>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {filtered.map(task => (
+              {tasks.map(task => (
                 <div key={task.id} className="rounded-2xl border border-slate-200 bg-white p-5">
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="flex-1">
@@ -168,6 +190,7 @@ export default function TasksPage() {
                       <p className="text-base font-semibold text-slate-900">{task.titulo}</p>
                       {task.descripcion && <p className="mt-1 text-sm text-slate-500">{task.descripcion}</p>}
                       <div className="mt-2 flex gap-4 text-xs text-slate-400 flex-wrap">
+                        <span className="font-medium text-slate-500">{getProjectName(task.projectId)}</span>
                         {task.fechaLimite && <span>Fecha límite: {task.fechaLimite}</span>}
                         {task.responsableId && <span>Responsable ID: {task.responsableId}</span>}
                         {task.comentarios?.length > 0 && (
@@ -185,7 +208,7 @@ export default function TasksPage() {
                           → {s}
                         </button>
                       ))}
-                      {(canCreate || task.responsableId === user?.id) && task.estado !== 'COMPLETADA' && task.estado !== 'CANCELADA' && (
+                      {canCreate && task.estado !== 'COMPLETADA' && task.estado !== 'CANCELADA' && (
                         <button onClick={() => { setEditTask(task); setIsFormOpen(true) }}
                           className="rounded-xl border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 transition">
                           Editar
@@ -255,4 +278,3 @@ export default function TasksPage() {
     </>
   )
 }
-
