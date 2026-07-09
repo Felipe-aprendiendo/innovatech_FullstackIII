@@ -8,6 +8,7 @@ import ProjectsPage from './pages/projects/ProjectsPage'
 import TasksPage from './pages/tasks/TasksPage'
 import UsersPage from './pages/users/UsersPage'
 import ReportsPage from './pages/reports/ReportsPage'
+import RolesPage from './pages/admin/RolesPage'
 
 function Layout() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/reports" element={<ReportsPage />} />
           <Route element={<RoleGuard roles={['ADMIN']} />}>
             <Route path="/users" element={<UsersPage />} />
+            <Route path="/roles" element={<RolesPage />} />
           </Route>
         </Route>
       </Route>
