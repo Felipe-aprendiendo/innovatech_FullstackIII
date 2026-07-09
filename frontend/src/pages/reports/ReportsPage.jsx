@@ -276,9 +276,40 @@ function UserDashboard() {
   if (loading) return <p className="text-slate-500 text-center py-10">Cargando tus tareas…</p>
   if (error)   return <p className="text-red-600 text-center py-10">{error}</p>
 
+  const total = tasks.length
+  const completadas = tasks.filter(t => t.estado === 'COMPLETADA').length
+  const porcentaje = total > 0 ? Math.round((completadas / total) * 100) : 0
+
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-slate-700">Mis tareas asignadas</h2>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="rounded-xl bg-blue-50 p-4 text-center">
+          <p className="text-3xl font-black text-blue-800">{total}</p>
+          <p className="mt-1 text-xs text-blue-600">Total asignadas</p>
+        </div>
+        <div className="rounded-xl bg-emerald-50 p-4 text-center">
+          <p className="text-3xl font-black text-emerald-800">{completadas}</p>
+          <p className="mt-1 text-xs text-emerald-600">Completadas</p>
+        </div>
+        <div className="rounded-xl bg-slate-100 p-4 text-center">
+          <p className="text-3xl font-black text-slate-800">{porcentaje}%</p>
+          <p className="mt-1 text-xs text-slate-600">Avance</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow p-4">
+        <div className="flex justify-between text-xs text-slate-500 mb-1.5">
+          <span>Progreso general</span>
+          <span>{completadas} de {total} completadas</span>
+        </div>
+        <div className="w-full bg-slate-200 rounded-full h-3">
+          <div className="bg-emerald-500 h-3 rounded-full transition-all duration-500"
+            style={{ width: `${porcentaje}%` }} />
+        </div>
+      </div>
+
       {tasks.length === 0 && (
         <p className="text-slate-400 text-center py-10">No tienes tareas asignadas.</p>
       )}

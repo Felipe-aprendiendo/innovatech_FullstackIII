@@ -19,4 +19,6 @@ public class UpdateTaskRequest {
     private LocalDate fechaLimite;
 
     private Long responsableId;
+
+    private Long projectId;
 }

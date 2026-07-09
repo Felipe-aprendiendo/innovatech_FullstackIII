@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import ProjectCard from '../../components/ProjectCard'
 import ProjectFormModal from '../../components/ProjectFormModal'
 import { useFetch } from '../../hooks/useFetch'
+import userService from '../../services/userService'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '')
 const PROJECTS_API_URL =
@@ -24,6 +25,7 @@ const initialProjectForm = {
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState([])
+  const [userMap, setUserMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [criterioOrden, setCriterioOrden] = useState('prioridad')
   const [errorMessage, setErrorMessage] = useState('')
@@ -39,6 +41,16 @@ export default function ProjectsPage() {
       setErrorMessage('')
       const data = await fetchWithToken(PROJECTS_API_URL)
       setProjects(Array.isArray(data) ? data : [])
+      // Fetch users for responsible names (succeeds for ADMIN, silently ignored for PROJECT_LEAD)
+      try {
+        const usersData = await userService.getAll()
+        const usersArr = Array.isArray(usersData) ? usersData : (usersData?.data ?? [])
+        const map = {}
+        usersArr.forEach(u => { map[u.id] = `${u.name ?? ''}${u.lastName ? ' ' + u.lastName : ''}`.trim() })
+        setUserMap(map)
+      } catch {
+        // non-ADMIN users cannot list users; responsible names won't show
+      }
     } catch (error) {
       setErrorMessage(error.message || 'Ocurrio un error al cargar los proyectos.')
     } finally {
@@ -196,7 +208,7 @@ export default function ProjectsPage() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
             {orderedProjects.map((project) => (
-              <ProjectCard key={project.id} project={project} onRefresh={loadProjects} />
+              <ProjectCard key={project.id} project={project} onRefresh={loadProjects} responsableNombre={userMap[project.responsableId] ?? ''} />
             ))}
           </div>
         )}
