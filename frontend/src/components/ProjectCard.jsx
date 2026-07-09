@@ -23,7 +23,7 @@ const nextStatuses = {
   CERRADO: [],
 }
 
-export default function ProjectCard({ project, onRefresh, responsableNombre }) {
+export default function ProjectCard({ project, onRefresh, onDelete, responsableNombre }) {
   const { user } = useAuth()
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [actionError, setActionError] = useState('')
@@ -62,7 +62,11 @@ export default function ProjectCard({ project, onRefresh, responsableNombre }) {
     try {
       setActionError('')
       await projectService.delete(project.id)
-      onRefresh()
+      if (onDelete) {
+        onDelete(project.id)
+      } else {
+        onRefresh()
+      }
     } catch (err) {
       setActionError(err.message)
     }

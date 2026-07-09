@@ -25,6 +25,11 @@ function LoginRoute() {
   return <Login />
 }
 
+function DefaultRedirect() {
+  const { user } = useAuth()
+  return <Navigate to={user?.role === 'USER' ? '/tasks' : '/projects'} replace />
+}
+
 export default function App() {
   return (
     <Routes>
@@ -32,7 +37,7 @@ export default function App() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
-          <Route index element={<Navigate to="/projects" replace />} />
+          <Route index element={<DefaultRedirect />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/reports" element={<ReportsPage />} />
@@ -43,7 +48,7 @@ export default function App() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/projects" replace />} />
+      <Route path="*" element={<DefaultRedirect />} />
     </Routes>
   )
 }
