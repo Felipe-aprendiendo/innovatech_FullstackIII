@@ -18,7 +18,7 @@ const prioridadStyles = {
 
 const nextEstados = {
   PENDIENTE:   ['EN_PROGRESO'],
-  EN_PROGRESO: ['COMPLETADA', 'CANCELADA'],
+  EN_PROGRESO: ['PENDIENTE', 'COMPLETADA', 'CANCELADA'],
   COMPLETADA:  [],
   CANCELADA:   [],
 }
@@ -34,6 +34,7 @@ export default function TasksPage() {
   const [commentTask, setCommentTask] = useState(null)
   const [commentText, setCommentText] = useState('')
   const [commentError, setCommentError] = useState('')
+  const [loadingComments, setLoadingComments] = useState(false)
 
   const canCreate = user?.role === 'ADMIN' || user?.role === 'PROJECT_LEAD'
   const canDelete = user?.role === 'ADMIN'
@@ -76,6 +77,21 @@ export default function TasksPage() {
     }
   }
 
+  const openCommentModal = async (task) => {
+    setCommentTask(task)
+    setCommentText('')
+    setCommentError('')
+    try {
+      setLoadingComments(true)
+      const res = await taskService.getById(task.id)
+      setCommentTask(res?.data ?? res)
+    } catch {
+      // keep the summary task data if fetch fails
+    } finally {
+      setLoadingComments(false)
+    }
+  }
+
   const handleAddComment = async (e) => {
     e.preventDefault()
     if (!commentText.trim()) return
@@ -83,6 +99,8 @@ export default function TasksPage() {
       setCommentError('')
       await taskService.addComment(commentTask.id, commentText.trim())
       setCommentText('')
+      const res = await taskService.getById(commentTask.id)
+      setCommentTask(res?.data ?? res)
       load()
     } catch (err) {
       setCommentError(err.message)
@@ -153,7 +171,7 @@ export default function TasksPage() {
                         {task.fechaLimite && <span>Fecha límite: {task.fechaLimite}</span>}
                         {task.responsableId && <span>Responsable ID: {task.responsableId}</span>}
                         {task.comentarios?.length > 0 && (
-                          <button onClick={() => setCommentTask(task)} className="text-blue-500 hover:underline">
+                          <button onClick={() => openCommentModal(task)} className="text-blue-500 hover:underline">
                             {task.comentarios.length} comentario(s)
                           </button>
                         )}
@@ -173,7 +191,7 @@ export default function TasksPage() {
                           Editar
                         </button>
                       )}
-                      <button onClick={() => setCommentTask(task)}
+                      <button onClick={() => openCommentModal(task)}
                         className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">
                         Comentar
                       </button>
@@ -208,14 +226,16 @@ export default function TasksPage() {
               <button onClick={() => setCommentTask(null)} className="text-slate-400 hover:text-slate-600 text-xl">×</button>
             </div>
             <div className="max-h-64 overflow-y-auto px-6 py-4 space-y-3">
-              {(commentTask.comentarios ?? []).length === 0
-                ? <p className="text-sm text-slate-400">Sin comentarios aún.</p>
-                : commentTask.comentarios.map(c => (
-                  <div key={c.id} className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-xs text-slate-400 mb-1">Usuario #{c.userId}</p>
-                    <p className="text-sm text-slate-700">{c.contenido}</p>
-                  </div>
-                ))
+              {loadingComments
+                ? <p className="text-sm text-slate-400 text-center py-2">Cargando comentarios...</p>
+                : (commentTask.comentarios ?? []).length === 0
+                  ? <p className="text-sm text-slate-400">Sin comentarios aún.</p>
+                  : commentTask.comentarios.map(c => (
+                    <div key={c.id} className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-xs text-slate-400 mb-1">Usuario #{c.userId}</p>
+                      <p className="text-sm text-slate-700">{c.contenido}</p>
+                    </div>
+                  ))
               }
             </div>
             <form onSubmit={handleAddComment} className="border-t border-slate-200 px-6 py-4">

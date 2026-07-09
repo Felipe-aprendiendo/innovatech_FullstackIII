@@ -190,7 +190,7 @@ public class TaskService {
     private void validateTransition(EstadoTarea actual, EstadoTarea nuevo) {
         boolean valid = switch (actual) {
             case PENDIENTE -> nuevo == EstadoTarea.EN_PROGRESO;
-            case EN_PROGRESO -> nuevo == EstadoTarea.COMPLETADA || nuevo == EstadoTarea.CANCELADA;
+            case EN_PROGRESO -> nuevo == EstadoTarea.COMPLETADA || nuevo == EstadoTarea.CANCELADA || nuevo == EstadoTarea.PENDIENTE;
             case COMPLETADA, CANCELADA -> false;
         };
         if (!valid) {

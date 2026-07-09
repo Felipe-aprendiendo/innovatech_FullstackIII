@@ -26,8 +26,8 @@ public class ProjectsClient {
             var response = restTemplate.getForObject(
                     projectsUrl + "/api/v1/projects/" + projectId,
                     Map.class);
-            if (response != null && response.get("data") instanceof Map<?, ?> data) {
-                return (String) data.get("nombre");
+            if (response != null && response.get("nombre") instanceof String nombre) {
+                return nombre;
             }
         } catch (Exception ex) {
             log.warn("Error obteniendo nombre del proyecto {}: {}", projectId, ex.getMessage());
@@ -46,9 +46,9 @@ public class ProjectsClient {
         try {
             var response = restTemplate.getForObject(
                     projectsUrl + "/api/v1/projects",
-                    Map.class);
-            if (response != null && response.get("data") instanceof List<?> data) {
-                return data.stream()
+                    List.class);
+            if (response != null) {
+                return response.stream()
                         .filter(item -> item instanceof Map<?, ?>)
                         .map(item -> ((Number) ((Map<?, ?>) item).get("id")).longValue())
                         .toList();
