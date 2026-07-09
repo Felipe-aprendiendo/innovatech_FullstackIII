@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import reportService from '../../services/reportService'
+import projectService from '../../services/projectService'
 
 function StatCard({ label, value, color = 'slate' }) {
   const colors = {
@@ -17,7 +18,7 @@ function StatCard({ label, value, color = 'slate' }) {
   )
 }
 
-function AdminDashboard() {
+function ResumenTab() {
   const [dashboard, setDashboard] = useState(null)
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
@@ -83,6 +84,166 @@ function AdminDashboard() {
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+function KpiTab() {
+  const [projects, setProjects]       = useState([])
+  const [selectedId, setSelectedId]   = useState('')
+  const [kpi, setKpi]                 = useState(null)
+  const [loadingKpi, setLoadingKpi]   = useState(false)
+  const [error, setError]             = useState(null)
+
+  useEffect(() => {
+    projectService.getAll()
+      .then(data => setProjects(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [])
+
+  const handleSelect = async (e) => {
+    const id = e.target.value
+    setSelectedId(id)
+    setKpi(null)
+    setError(null)
+    if (!id) return
+    try {
+      setLoadingKpi(true)
+      const data = await reportService.getKpiByProject(id)
+      setKpi(data)
+    } catch (err) {
+      setError(err.message || 'Error al cargar KPI.')
+    } finally {
+      setLoadingKpi(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <select value={selectedId} onChange={handleSelect}
+        className="w-full max-w-sm rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-blue-400 shadow-sm">
+        <option value="">— Selecciona un proyecto —</option>
+        {projects.map(p => (
+          <option key={p.id} value={p.id}>{p.nombre}</option>
+        ))}
+      </select>
+
+      {loadingKpi && <p className="text-slate-500 text-center py-8">Cargando KPI…</p>}
+      {error && <p className="text-red-600 text-center py-8">{error}</p>}
+
+      {kpi && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard label="Total tareas"  value={kpi.totalTareas}       color="slate"  />
+            <StatCard label="Completadas"   value={kpi.tareasCompletadas} color="green"  />
+            <StatCard label="En progreso"   value={kpi.tareasEnProgreso}  color="yellow" />
+            <StatCard label="Pendientes"    value={kpi.tareasPendientes}  color="blue"   />
+          </div>
+          <div className="bg-white rounded-xl shadow p-6">
+            <p className="text-sm text-slate-500 mb-2">Porcentaje de avance</p>
+            <p className="text-4xl font-black text-slate-900">
+              {typeof kpi.porcentajeAvance === 'number' ? `${Number(kpi.porcentajeAvance).toFixed(1)}%` : '—'}
+            </p>
+            <div className="mt-3 w-full bg-slate-200 rounded-full h-3">
+              <div className="bg-blue-500 h-3 rounded-full transition-all"
+                style={{ width: `${Math.min(kpi.porcentajeAvance ?? 0, 100)}%` }} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TareasTab() {
+  const [tasks, setTasks]     = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState(null)
+
+  const estadoBadge = {
+    PENDIENTE:   'bg-slate-200 text-slate-700',
+    EN_PROGRESO: 'bg-yellow-100 text-yellow-800',
+    COMPLETADA:  'bg-green-100 text-green-700',
+    CANCELADA:   'bg-red-100 text-red-700',
+  }
+
+  const prioridadBadge = {
+    ALTA:  'bg-rose-100 text-rose-700',
+    MEDIA: 'bg-orange-100 text-orange-700',
+    BAJA:  'bg-slate-100 text-slate-600',
+  }
+
+  useEffect(() => {
+    reportService.getTasksReport()
+      .then(data => setTasks(Array.isArray(data) ? data : []))
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return <p className="text-slate-500 text-center py-10">Cargando tareas…</p>
+  if (error)   return <p className="text-red-600 text-center py-10">{error}</p>
+
+  return (
+    <div className="bg-white rounded-xl shadow overflow-x-auto">
+      <table className="min-w-full text-sm">
+        <thead className="bg-slate-50 text-slate-600 uppercase text-xs">
+          <tr>
+            <th className="px-4 py-3 text-left">#</th>
+            <th className="px-4 py-3 text-left">Tarea</th>
+            <th className="px-4 py-3 text-center">Prioridad</th>
+            <th className="px-4 py-3 text-center">Estado</th>
+            <th className="px-4 py-3 text-center">Proyecto ID</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {tasks.length === 0 && (
+            <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400">Sin tareas disponibles</td></tr>
+          )}
+          {tasks.map(t => (
+            <tr key={t.taskId} className="hover:bg-slate-50 transition-colors">
+              <td className="px-4 py-3 text-slate-400">{t.taskId}</td>
+              <td className="px-4 py-3 font-medium text-slate-800">{t.titulo}</td>
+              <td className="px-4 py-3 text-center">
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${prioridadBadge[t.prioridad] ?? 'bg-slate-100 text-slate-600'}`}>
+                  {t.prioridad ?? '—'}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-center">
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${estadoBadge[t.estado] ?? 'bg-slate-100 text-slate-600'}`}>
+                  {t.estado ?? '—'}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-center text-slate-500">{t.projectId ?? '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function AdminDashboard() {
+  const [tab, setTab] = useState('resumen')
+  const tabs = [
+    { key: 'resumen',  label: 'Resumen' },
+    { key: 'kpi',      label: 'KPI por Proyecto' },
+    { key: 'tareas',   label: 'Reporte de Tareas' },
+  ]
+
+  return (
+    <div className="space-y-6">
+      <div className="flex gap-2 flex-wrap">
+        {tabs.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className={`rounded-xl px-5 py-2 text-sm font-semibold transition ${tab === t.key ? 'bg-slate-950 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'resumen' && <ResumenTab />}
+      {tab === 'kpi'     && <KpiTab />}
+      {tab === 'tareas'  && <TareasTab />}
     </div>
   )
 }
