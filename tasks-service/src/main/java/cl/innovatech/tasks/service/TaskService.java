@@ -105,6 +105,12 @@ public class TaskService {
             }
             task.setResponsableId(request.getResponsableId());
         }
+        if (request.getProjectId() != null) {
+            if (!projectsClient.projectExists(request.getProjectId())) {
+                throw new ResourceNotFoundException("Proyecto no encontrado: " + request.getProjectId());
+            }
+            task.setProjectId(request.getProjectId());
+        }
 
         return taskMapper.toResponse(taskRepository.save(task));
     }

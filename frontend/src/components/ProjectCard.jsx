@@ -23,7 +23,7 @@ const nextStatuses = {
   CERRADO: [],
 }
 
-export default function ProjectCard({ project, onRefresh }) {
+export default function ProjectCard({ project, onRefresh, onDelete, responsableNombre }) {
   const { user } = useAuth()
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [actionError, setActionError] = useState('')
@@ -62,7 +62,11 @@ export default function ProjectCard({ project, onRefresh }) {
     try {
       setActionError('')
       await projectService.delete(project.id)
-      onRefresh()
+      if (onDelete) {
+        onDelete(project.id)
+      } else {
+        onRefresh()
+      }
     } catch (err) {
       setActionError(err.message)
     }
@@ -88,6 +92,9 @@ export default function ProjectCard({ project, onRefresh }) {
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Descripción</p>
             <p className="mt-3 min-h-16 text-sm leading-7 text-slate-200">
               {project.descripcion || 'Sin descripción disponible.'}
+            </p>
+            <p className="mt-3 text-xs text-slate-400">
+              Responsable #{project.responsableId}{responsableNombre ? ` — ${responsableNombre}` : ''}
             </p>
           </div>
 
