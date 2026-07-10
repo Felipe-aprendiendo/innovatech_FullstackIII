@@ -18,6 +18,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks: [innovatech]
     restart: unless-stopped
 
   mysql-users:
@@ -36,6 +37,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks: [innovatech]
     restart: unless-stopped
 
   mysql-projects:
@@ -54,6 +56,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks: [innovatech]
     restart: unless-stopped
 
   mysql-tasks:
@@ -72,6 +75,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks: [innovatech]
     restart: unless-stopped
 
   mysql-reports:
@@ -90,6 +94,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks: [innovatech]
     restart: unless-stopped
 
   # ─── Redis ──────────────────────────────────────────────────────────────────
@@ -106,7 +111,217 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks: [innovatech]
     restart: unless-stopped
+
+  # ─── Microservicios ─────────────────────────────────────────────────────────
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    container_name: innovatech-auth
+    ports:
+      - "8001:8001"
+    environment:
+      DB_HOST: mysql-auth
+      DB_PORT: 3306
+      DB_NAME: ${MYSQL_AUTH_DB}
+      DB_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      USERS_SERVICE_URL: http://users-service:8002
+    depends_on:
+      mysql-auth:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [innovatech]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8001/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+    restart: unless-stopped
+
+  users-service:
+    build:
+      context: .
+      dockerfile: users-service/Dockerfile
+    container_name: innovatech-users
+    ports:
+      - "8002:8002"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-users:3306/${MYSQL_USERS_DB}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      AUTH_SERVICE_URL: http://auth-service:8001
+    depends_on:
+      mysql-users:
+        condition: service_healthy
+    networks: [innovatech]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8002/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+    restart: unless-stopped
+
+  projects-service:
+    build:
+      context: .
+      dockerfile: projects-service/Dockerfile
+    container_name: innovatech-projects
+    ports:
+      - "8003:8003"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-projects:3306/${MYSQL_PROJECTS_DB}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      USERS_SERVICE_URL: http://users-service:8002
+      TASKS_SERVICE_URL: http://tasks-service:8004
+    depends_on:
+      mysql-projects:
+        condition: service_healthy
+    networks: [innovatech]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8003/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+    restart: unless-stopped
+
+  tasks-service:
+    build:
+      context: .
+      dockerfile: tasks-service/Dockerfile
+    container_name: innovatech-tasks
+    ports:
+      - "8004:8004"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-tasks:3306/${MYSQL_TASKS_DB}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PROJECTS_SERVICE_URL: http://projects-service:8003
+      USERS_SERVICE_URL: http://users-service:8002
+    depends_on:
+      mysql-tasks:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [innovatech]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8004/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+    restart: unless-stopped
+
+  reports-service:
+    build:
+      context: .
+      dockerfile: reports-service/Dockerfile
+    container_name: innovatech-reports
+    ports:
+      - "8005:8005"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-reports:3306/${MYSQL_REPORTS_DB}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PROJECTS_SERVICE_URL: http://projects-service:8003
+      TASKS_SERVICE_URL: http://tasks-service:8004
+    depends_on:
+      mysql-reports:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [innovatech]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8005/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    container_name: innovatech-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:8001
+      USERS_SERVICE_URL: http://users-service:8002
+      PROJECTS_SERVICE_URL: http://projects-service:8003
+      TASKS_SERVICE_URL: http://tasks-service:8004
+      REPORTS_SERVICE_URL: http://reports-service:8005
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      GATEWAY_ALLOWED_ORIGIN: ${GATEWAY_ALLOWED_ORIGIN:-http://localhost}
+    depends_on:
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      users-service:
+        condition: service_started
+      projects-service:
+        condition: service_started
+      tasks-service:
+        condition: service_started
+      reports-service:
+        condition: service_started
+    networks: [innovatech]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    restart: unless-stopped
+
+  # ─── Frontend ───────────────────────────────────────────────────────────────
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${GATEWAY_URL:-http://localhost:8000}
+    container_name: innovatech-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      gateway:
+        condition: service_started
+    networks: [innovatech]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
+
+# ─── Red interna ─────────────────────────────────────────────────────────────
+
+networks:
+  innovatech:
+    driver: bridge
 
 # ─── Volúmenes persistentes ──────────────────────────────────────────────────
 

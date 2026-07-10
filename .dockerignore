@@ -1,0 +1,31 @@
+# Artefactos de build — excluidos para reducir el contexto enviado a Docker
+*/target/
+**/target/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Control de versiones
+.git/
+.gitignore
+
+# Logs
+**/logs/
+**/*.log
+
+# IDE y sistema operativo
+**/.idea/
+**/.vscode/
+**/*.iml
+**/.DS_Store
+**/Thumbs.db
+
+# Documentación (no necesaria en imágenes)
+*.md
+docs/
+
+# Archivos de entorno (nunca incluir en imágenes)
+.env
+.env.*
+!.env.example
